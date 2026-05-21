@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 
 namespace FileSystemP.WPF;
 
@@ -7,5 +8,26 @@ namespace FileSystemP.WPF;
 /// </summary>
 public partial class App : Application
 {
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        base.OnStartup(e);
+        ApplyTheme();
+    }
+
+    private static void ApplyTheme()
+    {
+        bool isLight = true;
+        using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+            @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+        if (key?.GetValue("AppsUseLightTheme") is int value)
+            isLight = value != 0;
+
+        string theme = isLight ? "Light" : "Dark";
+        var dict = new ResourceDictionary
+        {
+            Source = new Uri($"pack://application:,,,/Themes/{theme}.xaml", UriKind.Absolute)
+        };
+        Application.Current.Resources.MergedDictionaries[0] = dict;
+    }
 }
 
