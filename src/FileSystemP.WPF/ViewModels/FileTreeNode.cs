@@ -23,13 +23,21 @@ public partial class FileTreeNode : ObservableObject
 
     private bool _isLoaded;
 
+    // Private placeholder constructor — does NOT add a child, breaking the recursion
+    private FileTreeNode()
+    {
+        FullPath = string.Empty;
+        Name = string.Empty;
+        Icon = null;
+        _isLoaded = true;
+    }
+
     public FileTreeNode(string fullPath, string name, ImageSource? icon)
     {
         FullPath = fullPath;
         Name = name;
         Icon = icon;
-        // Add placeholder so expand arrow appears in TreeView
-        Children.Add(new FileTreeNode("", "", null) { _isLoaded = true });
+        Children.Add(new FileTreeNode()); // placeholder so expand arrow appears
     }
 
     partial void OnIsExpandedChanged(bool value)
