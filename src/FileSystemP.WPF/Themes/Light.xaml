@@ -4,9 +4,14 @@
     <SolidColorBrush x:Key="AppSurface" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="AppForeground" Color="#1A1A1A"/>
     <SolidColorBrush x:Key="AppMuted" Color="#999999"/>
-    <!-- Override system selection colors for light mode -->
+    <!-- Override system selection colors (affects TreeView) -->
     <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#0078D4"/>
     <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#D0D0D0"/>
     <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#1A1A1A"/>
+    <!-- ListView item selection (used in custom ControlTemplate) -->
+    <SolidColorBrush x:Key="AppSelection"         Color="#0078D4"/>
+    <SolidColorBrush x:Key="AppSelectionText"     Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="AppSelectionInactive" Color="#D0D0D0"/>
+    <SolidColorBrush x:Key="AppHover"             Color="#E5E5E5"/>
 </ResourceDictionary>

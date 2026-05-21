@@ -133,8 +133,35 @@
                 </ListView.View>
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
-                        <!-- Tag exposes MainWindowViewModel to context menus via PlacementTarget.Tag -->
-                        <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListView}}"/>
+                        <Setter Property="Tag"        Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListView}}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource AppForeground}"/>
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListViewItem">
+                                    <Border x:Name="Bd" Background="{TemplateBinding Background}" Padding="2,2" SnapsToDevicePixels="True">
+                                        <GridViewRowPresenter Content="{TemplateBinding Content}"
+                                                              Columns="{TemplateBinding GridView.ColumnCollection}"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AppHover}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AppSelection}"/>
+                                            <Setter Property="Foreground"                  Value="{DynamicResource AppSelectionText}"/>
+                                        </Trigger>
+                                        <MultiTrigger>
+                                            <MultiTrigger.Conditions>
+                                                <Condition Property="IsSelected"           Value="True"/>
+                                                <Condition Property="IsKeyboardFocusWithin" Value="False"/>
+                                            </MultiTrigger.Conditions>
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AppSelectionInactive}"/>
+                                        </MultiTrigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsDirectory}" Value="True">
                                 <Setter Property="ContextMenu" Value="{StaticResource FolderMenu}"/>
