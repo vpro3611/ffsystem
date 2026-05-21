@@ -83,7 +83,7 @@ public partial class FilePanelViewModel : ObservableObject
                 {
                     FileName = SelectedEntry.FilePath,
                     UseShellExecute = true
-                });
+                })?.Dispose();
             }
             catch (Exception ex)
             {
@@ -208,7 +208,7 @@ public partial class FilePanelViewModel : ObservableObject
             UndoCommand.NotifyCanExecuteChanged();
             await LoadEntries(_currentPath);
         }
-        catch (AppException ex)
+        catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }

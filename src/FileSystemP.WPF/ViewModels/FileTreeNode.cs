@@ -54,7 +54,7 @@ public partial class FileTreeNode : ObservableObject
         {
             entries = await Task.Run(() => FileDirectorySystemService.GetEntries(FullPath).ToList());
         }
-        catch (AppException)
+        catch (Exception)
         {
             await Application.Current.Dispatcher.InvokeAsync(() => Children.Clear());
             return;
