@@ -21,20 +21,47 @@
             <Separator/>
             <MenuItem Header="Delete"     Command="{Binding DataContext.Panel.DeleteCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
             <Separator/>
-            <MenuItem Header="New File"   Command="{Binding DataContext.Panel.NewFileCommand,   RelativeSource={RelativeSource AncestorType=Window}}"/>
-            <MenuItem Header="New Folder" Command="{Binding DataContext.Panel.NewFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <MenuItem Header="New File"            Command="{Binding DataContext.Panel.NewFileCommand,           RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <MenuItem Header="New File with Content" Command="{Binding DataContext.Panel.NewFileWithContentCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <MenuItem Header="New Folder"          Command="{Binding DataContext.Panel.NewFolderCommand,         RelativeSource={RelativeSource AncestorType=Window}}"/>
         </ContextMenu>
 
         <!-- Empty space context menu -->
         <ContextMenu x:Key="EmptySpaceMenu">
             <MenuItem Header="Paste"      Command="{Binding DataContext.Panel.PasteCommand,     RelativeSource={RelativeSource AncestorType=Window}}"/>
             <Separator/>
-            <MenuItem Header="New File"   Command="{Binding DataContext.Panel.NewFileCommand,   RelativeSource={RelativeSource AncestorType=Window}}"/>
-            <MenuItem Header="New Folder" Command="{Binding DataContext.Panel.NewFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <MenuItem Header="New File"            Command="{Binding DataContext.Panel.NewFileCommand,           RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <MenuItem Header="New File with Content" Command="{Binding DataContext.Panel.NewFileWithContentCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <MenuItem Header="New Folder"          Command="{Binding DataContext.Panel.NewFolderCommand,         RelativeSource={RelativeSource AncestorType=Window}}"/>
         </ContextMenu>
     </Window.Resources>
 
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar row -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal"
+                    Background="{DynamicResource AppSurface}" Height="34">
+            <Button Content="←" Command="{Binding NavigateBackCommand}"
+                    Padding="10,4" Foreground="{DynamicResource AppForeground}"
+                    Background="Transparent" BorderThickness="0" FontSize="14"
+                    ToolTip="Back"/>
+            <Button Content="→" Command="{Binding NavigateForwardCommand}"
+                    Padding="10,4" Foreground="{DynamicResource AppForeground}"
+                    Background="Transparent" BorderThickness="0" FontSize="14"
+                    ToolTip="Forward"/>
+            <Separator Width="1" Margin="4,6" Background="{DynamicResource AppMuted}"/>
+            <Button Content="↩ Undo" Command="{Binding Panel.UndoCommand}"
+                    Padding="10,4" Foreground="{DynamicResource AppForeground}"
+                    Background="Transparent" BorderThickness="0" FontSize="12"
+                    ToolTip="Undo last action"/>
+        </StackPanel>
+
+        <!-- Two-column split grid -->
+        <Grid Grid.Row="1">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="220" MinWidth="120"/>
             <ColumnDefinition Width="4"/>
@@ -144,6 +171,7 @@
                     </Style>
                 </TextBlock.Style>
             </TextBlock>
+        </Grid>
         </Grid>
     </Grid>
 </Window>
