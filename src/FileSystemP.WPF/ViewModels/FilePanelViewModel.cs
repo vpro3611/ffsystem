@@ -5,6 +5,7 @@ using FileSystemP.Core.Services;
 using FileSystemP.WPF.Helpers;
 using FileSystemP.WPF.Models;
 using FileSystemP.WPF.Views;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -16,6 +17,7 @@ public partial class FilePanelViewModel : ObservableObject
 {
     private readonly Action<string> _navigate;
     private string _currentPath = string.Empty;
+    private readonly Stack<IUndoAction> _undoStack = new();
 
     [ObservableProperty]
     private ObservableCollection<FileEntry> _entries = new();
@@ -98,9 +100,15 @@ public partial class FilePanelViewModel : ObservableObject
         var newName = InputDialog.Show("Enter new name:", SelectedEntry.Name);
         if (string.IsNullOrWhiteSpace(newName)) return;
 
+        var oldName = SelectedEntry.Name;
+        var parent = System.IO.Path.GetDirectoryName(SelectedEntry.FilePath)!;
+
         try
         {
             FileDirectorySystemService.Rename(SelectedEntry.FilePath, newName);
+            var newFullPath = System.IO.Path.Combine(parent, newName);
+            _undoStack.Push(new UndoRename(newFullPath, oldName));
+            UndoCommand.NotifyCanExecuteChanged();
             await LoadEntries(_currentPath);
         }
         catch (AppException ex)
@@ -149,6 +157,8 @@ public partial class FilePanelViewModel : ObservableObject
         try
         {
             FileDirectorySystemService.Copy(ClipboardPath, destination);
+            _undoStack.Push(new UndoPaste(destination));
+            UndoCommand.NotifyCanExecuteChanged();
             await LoadEntries(_currentPath);
         }
         catch (AppException ex)
@@ -169,6 +179,8 @@ public partial class FilePanelViewModel : ObservableObject
         try
         {
             FileDirectorySystemService.CreateFile(path);
+            _undoStack.Push(new UndoCreate(path));
+            UndoCommand.NotifyCanExecuteChanged();
             await LoadEntries(_currentPath);
         }
         catch (AppException ex)
@@ -187,9 +199,49 @@ public partial class FilePanelViewModel : ObservableObject
         try
         {
             FileDirectorySystemService.CreateDirectory(path);
+            _undoStack.Push(new UndoCreate(path));
+            UndoCommand.NotifyCanExecuteChanged();
             await LoadEntries(_currentPath);
         }
         catch (AppException ex)
+        {
+            MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanUndo))]
+    private async Task Undo()
+    {
+        if (_undoStack.Count == 0) return;
+        var action = _undoStack.Pop();
+        try
+        {
+            action.Execute();
+            await LoadEntries(_currentPath);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Undo failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        UndoCommand.NotifyCanExecuteChanged();
+    }
+
+    private bool CanUndo() => _undoStack.Count > 0;
+
+    [RelayCommand]
+    private async Task NewFileWithContent()
+    {
+        var result = ContentDialog.Show();
+        if (result is null || string.IsNullOrWhiteSpace(result.Value.name)) return;
+        var fullPath = System.IO.Path.Combine(_currentPath, result.Value.name);
+        try
+        {
+            await FileDirectorySystemService.CreateFileWithContent(fullPath, result.Value.content);
+            _undoStack.Push(new UndoCreate(fullPath));
+            UndoCommand.NotifyCanExecuteChanged();
+            await LoadEntries(_currentPath);
+        }
+        catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
@@ -227,4 +279,21 @@ public partial class FilePanelViewModel : ObservableObject
         if (bytes < 1024 * 1024 * 1024) return $"{bytes / (1024.0 * 1024):F1} MB";
         return $"{bytes / (1024.0 * 1024 * 1024):F1} GB";
     }
+}
+
+internal interface IUndoAction { void Execute(); }
+
+internal record UndoRename(string NewPath, string OriginalName) : IUndoAction
+{
+    public void Execute() => FileDirectorySystemService.Rename(NewPath, OriginalName);
+}
+
+internal record UndoCreate(string Path) : IUndoAction
+{
+    public void Execute() => FileDirectorySystemService.Delete(Path);
+}
+
+internal record UndoPaste(string DestPath) : IUndoAction
+{
+    public void Execute() => FileDirectorySystemService.Delete(DestPath);
 }
