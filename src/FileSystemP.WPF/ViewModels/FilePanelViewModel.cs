@@ -56,7 +56,7 @@ public partial class FilePanelViewModel : ObservableObject
             foreach (var e in entries) Entries.Add(e);
             IsEmpty = Entries.Count == 0;
         }
-        catch (AppException ex)
+        catch (Exception ex)
         {
             Entries.Clear();
             IsEmpty = false;
