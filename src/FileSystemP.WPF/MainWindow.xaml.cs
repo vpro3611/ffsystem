@@ -1,23 +1,26 @@
-﻿using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using FileSystemP.WPF.ViewModels;
 
 namespace FileSystemP.WPF;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
 public partial class MainWindow : Window
 {
     public MainWindow()
     {
         InitializeComponent();
+        DataContext = new MainWindowViewModel();
+    }
+
+    private void FileTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+    {
+        if (DataContext is MainWindowViewModel vm && e.NewValue is FileTreeNode node)
+            vm.Tree.SelectedNode = node;
+    }
+
+    private void FileList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm && vm.Panel.OpenCommand.CanExecute(null))
+            vm.Panel.OpenCommand.Execute(null);
     }
 }
