@@ -4,35 +4,35 @@
         Title="FileSystemP" Height="600" Width="900"
         Background="{DynamicResource AppBackground}">
     <Window.Resources>
-        <!-- File context menu -->
+        <!-- File context menu — PlacementTarget is ListViewItem; Tag holds MainWindowViewModel via ListView.DataContext -->
         <ContextMenu x:Key="FileMenu">
-            <MenuItem Header="Open"       Command="{Binding DataContext.Panel.OpenCommand,   RelativeSource={RelativeSource AncestorType=Window}}"/>
-            <MenuItem Header="Rename"     Command="{Binding DataContext.Panel.RenameCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
-            <MenuItem Header="Copy"       Command="{Binding DataContext.Panel.CopyCommand,   RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <MenuItem Header="Open"       Command="{Binding PlacementTarget.Tag.Panel.OpenCommand,   RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="Rename"     Command="{Binding PlacementTarget.Tag.Panel.RenameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="Copy"       Command="{Binding PlacementTarget.Tag.Panel.CopyCommand,   RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <Separator/>
-            <MenuItem Header="Delete"     Command="{Binding DataContext.Panel.DeleteCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <MenuItem Header="Delete"     Command="{Binding PlacementTarget.Tag.Panel.DeleteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
         </ContextMenu>
 
         <!-- Folder context menu -->
         <ContextMenu x:Key="FolderMenu">
-            <MenuItem Header="Open"       Command="{Binding DataContext.Panel.OpenCommand,   RelativeSource={RelativeSource AncestorType=Window}}"/>
-            <MenuItem Header="Rename"     Command="{Binding DataContext.Panel.RenameCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
-            <MenuItem Header="Copy"       Command="{Binding DataContext.Panel.CopyCommand,   RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <MenuItem Header="Open"       Command="{Binding PlacementTarget.Tag.Panel.OpenCommand,   RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="Rename"     Command="{Binding PlacementTarget.Tag.Panel.RenameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="Copy"       Command="{Binding PlacementTarget.Tag.Panel.CopyCommand,   RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <Separator/>
-            <MenuItem Header="Delete"     Command="{Binding DataContext.Panel.DeleteCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <MenuItem Header="Delete"     Command="{Binding PlacementTarget.Tag.Panel.DeleteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <Separator/>
-            <MenuItem Header="New File"            Command="{Binding DataContext.Panel.NewFileCommand,           RelativeSource={RelativeSource AncestorType=Window}}"/>
-            <MenuItem Header="New File with Content" Command="{Binding DataContext.Panel.NewFileWithContentCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
-            <MenuItem Header="New Folder"          Command="{Binding DataContext.Panel.NewFolderCommand,         RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <MenuItem Header="New File"              Command="{Binding PlacementTarget.Tag.Panel.NewFileCommand,              RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="New File with Content" Command="{Binding PlacementTarget.Tag.Panel.NewFileWithContentCommand,  RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="New Folder"            Command="{Binding PlacementTarget.Tag.Panel.NewFolderCommand,           RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
         </ContextMenu>
 
-        <!-- Empty space context menu -->
+        <!-- Empty space context menu — PlacementTarget is ListView whose DataContext IS MainWindowViewModel -->
         <ContextMenu x:Key="EmptySpaceMenu">
-            <MenuItem Header="Paste"      Command="{Binding DataContext.Panel.PasteCommand,     RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <MenuItem Header="Paste"                 Command="{Binding PlacementTarget.DataContext.Panel.PasteCommand,            RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <Separator/>
-            <MenuItem Header="New File"            Command="{Binding DataContext.Panel.NewFileCommand,           RelativeSource={RelativeSource AncestorType=Window}}"/>
-            <MenuItem Header="New File with Content" Command="{Binding DataContext.Panel.NewFileWithContentCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
-            <MenuItem Header="New Folder"          Command="{Binding DataContext.Panel.NewFolderCommand,         RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <MenuItem Header="New File"              Command="{Binding PlacementTarget.DataContext.Panel.NewFileCommand,           RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="New File with Content" Command="{Binding PlacementTarget.DataContext.Panel.NewFileWithContentCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="New Folder"            Command="{Binding PlacementTarget.DataContext.Panel.NewFolderCommand,         RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
         </ContextMenu>
     </Window.Resources>
 
@@ -126,6 +126,8 @@
                 </ListView.View>
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
+                        <!-- Tag exposes MainWindowViewModel to context menus via PlacementTarget.Tag -->
+                        <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListView}}"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsDirectory}" Value="True">
                                 <Setter Property="ContextMenu" Value="{StaticResource FolderMenu}"/>

@@ -111,7 +111,7 @@ public partial class FilePanelViewModel : ObservableObject
             UndoCommand.NotifyCanExecuteChanged();
             await LoadEntries(_currentPath);
         }
-        catch (AppException ex)
+        catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
@@ -130,7 +130,7 @@ public partial class FilePanelViewModel : ObservableObject
             FileDirectorySystemService.Delete(SelectedEntry.FilePath);
             await LoadEntries(_currentPath);
         }
-        catch (AppException ex)
+        catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
@@ -146,7 +146,12 @@ public partial class FilePanelViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanPaste))]
     private async Task Paste()
     {
-        if (ClipboardPath is null || string.IsNullOrEmpty(_currentPath)) return;
+        if (ClipboardPath is null) return;
+        if (string.IsNullOrEmpty(_currentPath))
+        {
+            MessageBox.Show("Navigate to a destination folder first.", "No folder selected", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
         if (Directory.Exists(ClipboardPath))
         {
             MessageBox.Show("Copying folders is not supported.", "Unsupported", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -161,7 +166,7 @@ public partial class FilePanelViewModel : ObservableObject
             UndoCommand.NotifyCanExecuteChanged();
             await LoadEntries(_currentPath);
         }
-        catch (AppException ex)
+        catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
@@ -183,7 +188,7 @@ public partial class FilePanelViewModel : ObservableObject
             UndoCommand.NotifyCanExecuteChanged();
             await LoadEntries(_currentPath);
         }
-        catch (AppException ex)
+        catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
