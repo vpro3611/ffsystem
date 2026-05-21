@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -47,7 +47,7 @@ public static class ShellIconHelper
 
     #endregion
 
-    private static readonly Dictionary<string, ImageSource> _cache = new();
+    private static readonly ConcurrentDictionary<string, ImageSource> _cache = new();
 
     /// <summary>
     /// Returns a small (16×16) shell icon for the given path.
@@ -65,6 +65,8 @@ public static class ShellIconHelper
     /// </returns>
     public static ImageSource? GetIcon(string path, bool isDirectory = false, bool isDrive = false)
     {
+        if (string.IsNullOrEmpty(path)) return null;
+
         string cacheKey = BuildCacheKey(path, isDirectory, isDrive);
 
         if (_cache.TryGetValue(cacheKey, out ImageSource? cached))
@@ -73,7 +75,7 @@ public static class ShellIconHelper
         ImageSource? icon = FetchIcon(path, isDirectory, isDrive);
 
         if (icon != null)
-            _cache[cacheKey] = icon;
+            _cache.TryAdd(cacheKey, icon);
 
         return icon;
     }
@@ -85,7 +87,7 @@ public static class ShellIconHelper
     private static string BuildCacheKey(string path, bool isDirectory, bool isDrive)
     {
         if (isDrive)
-            return "__drive";
+            return "__drive:" + path[0].ToString().ToUpperInvariant();
 
         if (isDirectory)
             return "__folder";
@@ -97,19 +99,27 @@ public static class ShellIconHelper
     private static ImageSource? FetchIcon(string path, bool isDirectory, bool isDrive)
     {
         uint fileAttributes;
-        uint flags = SHGFI_ICON | SHGFI_SMALLICON | SHGFI_USEFILEATTRIBUTES;
+        uint flags;
 
-        if (isDirectory || isDrive)
+        if (isDrive)
+        {
+            // Drive icons are path-dependent — do NOT use SHGFI_USEFILEATTRIBUTES
+            // so SHGetFileInfo resolves the real drive icon from the actual path.
+            fileAttributes = FILE_ATTRIBUTE_DIRECTORY;
+            flags = SHGFI_ICON | SHGFI_SMALLICON;
+        }
+        else if (isDirectory)
         {
             fileAttributes = FILE_ATTRIBUTE_DIRECTORY;
+            flags = SHGFI_ICON | SHGFI_SMALLICON | SHGFI_USEFILEATTRIBUTES;
             // For a generic folder icon use a constant dummy path so the
             // result is purely attribute-driven.
-            if (isDirectory)
-                path = "folder";
+            path = "folder";
         }
         else
         {
             fileAttributes = FILE_ATTRIBUTE_NORMAL;
+            flags = SHGFI_ICON | SHGFI_SMALLICON | SHGFI_USEFILEATTRIBUTES;
             // Keep only the extension part — the file doesn't need to exist.
             string ext = System.IO.Path.GetExtension(path);
             path = string.IsNullOrEmpty(ext) ? "file" : "file" + ext;
@@ -120,7 +130,7 @@ public static class ShellIconHelper
             path,
             fileAttributes,
             ref shfi,
-            (uint)Marshal.SizeOf(shfi),
+            (uint)Marshal.SizeOf<SHFILEINFO>(),
             flags);
 
         if (result == IntPtr.Zero || shfi.hIcon == IntPtr.Zero)
