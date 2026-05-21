@@ -1,15 +1,17 @@
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Windows.Media;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FileSystemP.Core;
 using FileSystemP.Core.Services;
+using FileSystemP.WPF.Helpers;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Windows.Media;
 
 namespace FileSystemP.WPF.ViewModels;
 
 public partial class FileTreeNode : ObservableObject
 {
-    public string Path { get; }
+    public string FullPath { get; }
     public string Name { get; }
     public ImageSource? Icon { get; }
 
@@ -17,39 +19,49 @@ public partial class FileTreeNode : ObservableObject
     private bool _isExpanded;
 
     [ObservableProperty]
-    private ObservableCollection<FileTreeNode> _children;
+    private ObservableCollection<FileTreeNode> _children = new();
 
-    public FileTreeNode(string path, string name, ImageSource? icon)
+    private bool _isLoaded;
+
+    public FileTreeNode(string fullPath, string name, ImageSource? icon)
     {
-        Path = path;
+        FullPath = fullPath;
         Name = name;
         Icon = icon;
-        _children = new ObservableCollection<FileTreeNode>
-        {
-            new FileTreeNode("__dummy", "__dummy", null)
-        };
+        // Add placeholder so expand arrow appears in TreeView
+        Children.Add(new FileTreeNode("", "", null) { _isLoaded = true });
     }
 
     partial void OnIsExpandedChanged(bool value)
     {
-        if (!value) return;
+        if (!value || _isLoaded) return;
+        _isLoaded = true;
+        LoadChildrenAsync();
+    }
 
-        // Only expand if the first child is the dummy placeholder
-        if (_children.Count != 1 || _children[0].Path != "__dummy") return;
-
-        _children.Clear();
-
+    private async void LoadChildrenAsync()
+    {
+        IEnumerable<FileSystemInfo>? entries = null;
         try
         {
-            var entries = FileDirectorySystemService.GetEntries(Path);
-            foreach (var entry in entries.OfType<DirectoryInfo>())
-            {
-                _children.Add(new FileTreeNode(entry.FullName, entry.Name, null));
-            }
+            entries = await Task.Run(() => FileDirectorySystemService.GetEntries(FullPath).ToList());
         }
         catch (AppException)
         {
-            // Leave children empty on access errors
+            await Application.Current.Dispatcher.InvokeAsync(() => Children.Clear());
+            return;
         }
+
+        await Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            Children.Clear();
+            foreach (var dir in entries.OfType<DirectoryInfo>())
+            {
+                Children.Add(new FileTreeNode(
+                    dir.FullName,
+                    dir.Name,
+                    ShellIconHelper.GetIcon(dir.FullName, isDirectory: true)));
+            }
+        });
     }
 }
