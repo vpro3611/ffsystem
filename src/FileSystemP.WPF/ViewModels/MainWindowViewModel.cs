@@ -1,5 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using FileSystemP.WPF.ViewModels;
+using System.Collections.Generic;
 
 namespace FileSystemP.WPF.ViewModels;
 
@@ -11,15 +13,47 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private string _currentPath = string.Empty;
 
+    private readonly Stack<string> _backStack = new();
+    private readonly Stack<string> _forwardStack = new();
+
     public MainWindowViewModel()
     {
-        Action<string> navigate = path => CurrentPath = path;
-        Tree = new FileTreeViewModel(navigate);
-        Panel = new FilePanelViewModel(navigate);
+        Tree = new FileTreeViewModel(NavigateTo);
+        Panel = new FilePanelViewModel(NavigateTo);
     }
 
     partial void OnCurrentPathChanged(string value)
     {
         _ = Panel.LoadEntries(value);
     }
+
+    private void NavigateTo(string path)
+    {
+        if (!string.IsNullOrEmpty(CurrentPath))
+            _backStack.Push(CurrentPath);
+        _forwardStack.Clear();
+        CurrentPath = path;
+        NavigateBackCommand.NotifyCanExecuteChanged();
+        NavigateForwardCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanGoBack))]
+    private void NavigateBack()
+    {
+        _forwardStack.Push(CurrentPath);
+        CurrentPath = _backStack.Pop();
+        NavigateBackCommand.NotifyCanExecuteChanged();
+        NavigateForwardCommand.NotifyCanExecuteChanged();
+    }
+    private bool CanGoBack() => _backStack.Count > 0;
+
+    [RelayCommand(CanExecute = nameof(CanGoForward))]
+    private void NavigateForward()
+    {
+        _backStack.Push(CurrentPath);
+        CurrentPath = _forwardStack.Pop();
+        NavigateBackCommand.NotifyCanExecuteChanged();
+        NavigateForwardCommand.NotifyCanExecuteChanged();
+    }
+    private bool CanGoForward() => _forwardStack.Count > 0;
 }
