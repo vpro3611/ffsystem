@@ -26,6 +26,19 @@
             <MenuItem Header="New Folder"            Command="{Binding PlacementTarget.Tag.Panel.NewFolderCommand,           RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
         </ContextMenu>
 
+        <!-- Toolbar button style: transparent background, invisible when disabled -->
+        <Style x:Key="ToolbarButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppForeground}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- Empty space context menu — PlacementTarget is ListView whose DataContext IS MainWindowViewModel -->
         <ContextMenu x:Key="EmptySpaceMenu">
             <MenuItem Header="Paste"                 Command="{Binding PlacementTarget.DataContext.Panel.PasteCommand,            RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
@@ -46,18 +59,12 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal"
                     Background="{DynamicResource AppSurface}" Height="34">
             <Button Content="←" Command="{Binding NavigateBackCommand}"
-                    Padding="10,4" Foreground="{DynamicResource AppForeground}"
-                    Background="Transparent" BorderThickness="0" FontSize="14"
-                    ToolTip="Back"/>
+                    Style="{StaticResource ToolbarButton}" Padding="10,4" FontSize="14" ToolTip="Back"/>
             <Button Content="→" Command="{Binding NavigateForwardCommand}"
-                    Padding="10,4" Foreground="{DynamicResource AppForeground}"
-                    Background="Transparent" BorderThickness="0" FontSize="14"
-                    ToolTip="Forward"/>
+                    Style="{StaticResource ToolbarButton}" Padding="10,4" FontSize="14" ToolTip="Forward"/>
             <Separator Width="1" Margin="4,6" Background="{DynamicResource AppMuted}"/>
             <Button Content="↩ Undo" Command="{Binding Panel.UndoCommand}"
-                    Padding="10,4" Foreground="{DynamicResource AppForeground}"
-                    Background="Transparent" BorderThickness="0" FontSize="12"
-                    ToolTip="Undo last action"/>
+                    Style="{StaticResource ToolbarButton}" Padding="10,4" FontSize="12" ToolTip="Undo last action"/>
         </StackPanel>
 
         <!-- Two-column split grid -->
