@@ -71,5 +71,14 @@ public partial class FileTreeNode : ObservableObject
                     ShellIconHelper.GetIcon(dir.FullName, isDirectory: true)));
             }
         });
+
+        if (Children.Count == 0)
+        {
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                IsExpanded = false;
+                _isLoaded = false;
+            });
+        }
     }
 }
