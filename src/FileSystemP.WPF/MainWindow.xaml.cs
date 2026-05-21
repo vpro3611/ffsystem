@@ -23,4 +23,13 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel vm && vm.Panel.OpenCommand.CanExecute(null))
             vm.Panel.OpenCommand.Execute(null);
     }
+
+    private void FileList_PreviewMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        DependencyObject? dep = e.OriginalSource as DependencyObject;
+        while (dep != null && dep is not ListViewItem)
+            dep = System.Windows.Media.VisualTreeHelper.GetParent(dep);
+        if (dep is ListViewItem item)
+            FileList.SelectedItem = item.DataContext;
+    }
 }

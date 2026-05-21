@@ -60,6 +60,7 @@
                 <TreeView.ItemContainerStyle>
                     <Style TargetType="TreeViewItem">
                         <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                        <Setter Property="Padding" Value="4,3"/>
                     </Style>
                 </TreeView.ItemContainerStyle>
             </TreeView>
@@ -79,6 +80,7 @@
                       Foreground="{DynamicResource AppForeground}"
                       BorderThickness="0"
                       MouseDoubleClick="FileList_MouseDoubleClick"
+                      PreviewMouseRightButtonDown="FileList_PreviewMouseRightButtonDown"
                       ContextMenu="{StaticResource EmptySpaceMenu}">
                 <ListView.View>
                     <GridView>

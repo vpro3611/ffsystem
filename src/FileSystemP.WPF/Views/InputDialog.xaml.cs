@@ -19,6 +19,7 @@ public partial class InputDialog : Window
     public static string? Show(string prompt, string? defaultValue = null)
     {
         var dialog = new InputDialog(prompt, defaultValue);
+        dialog.Owner = Application.Current.MainWindow;
         return dialog.ShowDialog() == true ? dialog.InputBox.Text : null;
     }
 }
