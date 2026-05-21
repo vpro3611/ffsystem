@@ -139,6 +139,11 @@ public partial class FilePanelViewModel : ObservableObject
     private async Task Paste()
     {
         if (ClipboardPath is null || string.IsNullOrEmpty(_currentPath)) return;
+        if (Directory.Exists(ClipboardPath))
+        {
+            MessageBox.Show("Copying folders is not supported.", "Unsupported", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
 
         var destination = Path.Combine(_currentPath, Path.GetFileName(ClipboardPath));
         try
