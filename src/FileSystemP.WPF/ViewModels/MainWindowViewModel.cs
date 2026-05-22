@@ -58,4 +58,13 @@ public partial class MainWindowViewModel : ObservableObject
         NavigateForwardCommand.NotifyCanExecuteChanged();
     }
     private bool CanGoForward() => _forwardStack.Count > 0;
+
+    [RelayCommand]
+    private void ShowTreeNodeProperties(FileTreeNode? node)
+    {
+        if (node is null)
+            return;
+
+        Panel.ShowPropertiesForPath(node.FullPath, isDirectory: true);
+    }
 }

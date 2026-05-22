@@ -11,6 +11,8 @@
             <MenuItem Header="Copy"       Command="{Binding PlacementTarget.Tag.Panel.CopyCommand,   RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <Separator/>
             <MenuItem Header="Delete"     Command="{Binding PlacementTarget.Tag.Panel.DeleteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <Separator/>
+            <MenuItem Header="Properties" Command="{Binding PlacementTarget.Tag.Panel.ShowPropertiesCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
         </ContextMenu>
 
         <!-- Folder context menu -->
@@ -24,6 +26,14 @@
             <MenuItem Header="New File"              Command="{Binding PlacementTarget.Tag.Panel.NewFileCommand,              RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <MenuItem Header="New File with Content" Command="{Binding PlacementTarget.Tag.Panel.NewFileWithContentCommand,  RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <MenuItem Header="New Folder"            Command="{Binding PlacementTarget.Tag.Panel.NewFolderCommand,           RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <Separator/>
+            <MenuItem Header="Properties"            Command="{Binding PlacementTarget.Tag.Panel.ShowPropertiesCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+        </ContextMenu>
+
+        <ContextMenu x:Key="TreeFolderMenu">
+            <MenuItem Header="Properties"
+                      Command="{Binding PlacementTarget.Tag.ShowTreeNodePropertiesCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
         </ContextMenu>
 
         <!-- Toolbar button style: transparent background, invisible when disabled -->
@@ -109,6 +119,8 @@
                     <Style TargetType="TreeViewItem">
                         <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
                         <Setter Property="Padding" Value="4,3"/>
+                        <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=TreeView}}"/>
+                        <Setter Property="ContextMenu" Value="{StaticResource TreeFolderMenu}"/>
                     </Style>
                 </TreeView.ItemContainerStyle>
             </TreeView>
