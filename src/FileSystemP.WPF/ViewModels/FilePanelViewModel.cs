@@ -99,16 +99,18 @@ public partial class FilePanelViewModel : ObservableObject
     private void ShowProperties()
     {
         if (SelectedEntry is null) return;
+        ShowPropertiesForPath(SelectedEntry.FilePath, SelectedEntry.IsDirectory);
+    }
 
+    public void ShowPropertiesForPath(string path, bool isDirectory)
+    {
         try
         {
-            object metadata;
-            if (SelectedEntry.IsDirectory)
-                metadata = _metadataProvider.GetDirectoryMetadata(SelectedEntry.FilePath);
-            else
-                metadata = _metadataProvider.GetFileMetadata(SelectedEntry.FilePath);
+            object metadata = isDirectory
+                ? _metadataProvider.GetDirectoryMetadata(path)
+                : _metadataProvider.GetFileMetadata(path);
 
-            // Logic to open window will be added in a later task
+            PropertiesWindow.ShowFor(metadata, Application.Current.MainWindow);
         }
         catch (Exception ex)
         {
