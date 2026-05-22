@@ -75,6 +75,7 @@ public class NtfsMetadataProviderTests : IDisposable
         // Arrange
         var dirPath = At("testdir");
         Directory.CreateDirectory(dirPath);
+        File.WriteAllText(Path.Combine(dirPath, "root.txt"), "12345");
         var expectedInfo = new DirectoryInfo(dirPath);
 
         // Act
@@ -85,10 +86,29 @@ public class NtfsMetadataProviderTests : IDisposable
         Assert.Equal(expectedInfo.FullName, metadata.FullPath);
         Assert.Equal(expectedInfo.Root.FullName, metadata.Root);
         Assert.Equal(expectedInfo.Parent?.FullName ?? expectedInfo.Root.FullName, metadata.Parent);
+        Assert.Equal(5, metadata.Size);
         Assert.True((expectedInfo.CreationTime - metadata.CreatedAt).Duration() < TimeSpan.FromSeconds(1));
         Assert.True((expectedInfo.LastWriteTime - metadata.ModifiedAt).Duration() < TimeSpan.FromSeconds(1));
         Assert.True((expectedInfo.LastAccessTime - metadata.AccessedAt).Duration() < TimeSpan.FromSeconds(1));
         Assert.Equal(expectedInfo.Attributes, metadata.Attributes);
+    }
+
+    [Fact]
+    public void GetDirectoryMetadata_WithNestedFiles_ReturnsRecursiveSize()
+    {
+        // Arrange
+        var dirPath = At("recursive");
+        var nestedPath = Path.Combine(dirPath, "nested");
+        Directory.CreateDirectory(nestedPath);
+
+        File.WriteAllText(Path.Combine(dirPath, "first.txt"), "1234");
+        File.WriteAllText(Path.Combine(nestedPath, "second.txt"), "123456");
+
+        // Act
+        var metadata = _provider.GetDirectoryMetadata(dirPath);
+
+        // Assert
+        Assert.Equal(10, metadata.Size);
     }
 
     [Fact]

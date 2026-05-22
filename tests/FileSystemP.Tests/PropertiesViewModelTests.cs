@@ -33,7 +33,8 @@ public class PropertiesViewModelTests
         // Assert
         Assert.Equal("test.txt", viewModel.Name);
         Assert.Equal("TXT File", viewModel.Type);
-        Assert.Equal(@"C:\test.txt", viewModel.Location);
+        Assert.Equal(@"C:\", viewModel.Location);
+        Assert.Equal(@"C:\test.txt", viewModel.TargetPath);
         Assert.Contains("1.0 KB", viewModel.Size);
         Assert.Equal(createdAt.ToString("f"), viewModel.CreatedAt);
         Assert.Equal(modifiedAt.ToString("f"), viewModel.ModifiedAt);
@@ -57,6 +58,7 @@ public class PropertiesViewModelTests
             FullPath: @"C:\testdir",
             Root: @"C:\",
             Parent: @"C:\",
+            Size: 2048,
             CreatedAt: createdAt,
             ModifiedAt: modifiedAt,
             AccessedAt: accessedAt,
@@ -69,8 +71,9 @@ public class PropertiesViewModelTests
         // Assert
         Assert.Equal("testdir", viewModel.Name);
         Assert.Equal("File Folder", viewModel.Type);
-        Assert.Equal(@"C:\testdir", viewModel.Location);
-        Assert.Equal("N/A", viewModel.Size);
+        Assert.Equal(@"C:\", viewModel.Location);
+        Assert.Equal(@"C:\testdir", viewModel.TargetPath);
+        Assert.Contains("2.0 KB", viewModel.Size);
         Assert.Equal(createdAt.ToString("f"), viewModel.CreatedAt);
         Assert.Equal(modifiedAt.ToString("f"), viewModel.ModifiedAt);
         Assert.Equal(accessedAt.ToString("f"), viewModel.AccessedAt);
