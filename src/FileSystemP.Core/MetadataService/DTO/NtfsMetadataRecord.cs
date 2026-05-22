@@ -18,6 +18,7 @@ public record DirectoryNtfsMetadataRecord(
     string FullPath,
     string Root,
     string Parent,
+    long Size,
     DateTime CreatedAt,
     DateTime ModifiedAt,
     DateTime AccessedAt,

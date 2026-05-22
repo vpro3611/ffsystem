@@ -42,11 +42,15 @@ public class NtfsMetadataProvider : INtfsMetadataProvider
 
         string parentPath = dirInfo.Parent?.FullName ?? dirInfo.Root.FullName;
         
+        long dirSize = dirInfo
+            .EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
+        
         return new DirectoryNtfsMetadataRecord(
             dirInfo.Name,
             dirInfo.FullName,
             dirInfo.Root.FullName,
             parentPath,
+            Size: dirSize,
             dirInfo.CreationTime,
             dirInfo.LastWriteTime,
             dirInfo.LastAccessTime,
