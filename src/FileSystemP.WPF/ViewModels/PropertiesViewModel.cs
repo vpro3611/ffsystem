@@ -1,6 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using FileSystemP.Core.MetadataService.DTO;
+using FileSystemP.WPF.Helpers;
 using System.IO;
+using System.Windows.Media;
 
 namespace FileSystemP.WPF.ViewModels;
 
@@ -8,7 +10,9 @@ public partial class PropertiesViewModel : ObservableObject
 {
     [ObservableProperty] private string _name = string.Empty;
     [ObservableProperty] private string _type = string.Empty;
+    [ObservableProperty] private ImageSource? _icon;
     [ObservableProperty] private string _location = string.Empty;
+    [ObservableProperty] private string _targetPath = string.Empty;
     [ObservableProperty] private string _size = string.Empty;
     [ObservableProperty] private string _createdAt = string.Empty;
     [ObservableProperty] private string _modifiedAt = string.Empty;
@@ -25,7 +29,9 @@ public partial class PropertiesViewModel : ObservableObject
         {
             Name = file.Name;
             Type = string.IsNullOrEmpty(file.Extension) ? "File" : $"{file.Extension.TrimStart('.').ToUpperInvariant()} File";
-            Location = file.FullPath;
+            Icon = ShellIconHelper.GetIcon(file.FullPath);
+            Location = file.Directory;
+            TargetPath = file.FullPath;
             Size = FormatSize(file.Size);
             CreatedAt = file.CreatedAt.ToString("f");
             ModifiedAt = file.ModifiedAt.ToString("f");
@@ -40,8 +46,10 @@ public partial class PropertiesViewModel : ObservableObject
         {
             Name = dir.Name;
             Type = "File Folder";
-            Location = dir.FullPath;
-            Size = "N/A"; // Or calculate if needed, but NTFS record has no size for dir
+            Icon = ShellIconHelper.GetIcon(dir.FullPath, isDirectory: true);
+            Location = dir.Parent;
+            TargetPath = dir.FullPath;
+            Size = FormatSize(dir.Size);
             CreatedAt = dir.CreatedAt.ToString("f");
             ModifiedAt = dir.ModifiedAt.ToString("f");
             AccessedAt = dir.AccessedAt.ToString("f");
