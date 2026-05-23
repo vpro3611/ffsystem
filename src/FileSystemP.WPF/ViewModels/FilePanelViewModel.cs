@@ -110,7 +110,15 @@ public partial class FilePanelViewModel : ObservableObject
                 ? _metadataProvider.GetDirectoryMetadata(path)
                 : _metadataProvider.GetFileMetadata(path);
 
-            PropertiesWindow.ShowFor(metadata, Application.Current.MainWindow);
+            bool changed = PropertiesWindow.ShowFor(
+                metadata,
+                Application.Current.MainWindow,
+                onChangesApplied: () => _ = LoadEntries(_currentPath));
+
+            if (changed)
+            {
+                _ = LoadEntries(_currentPath);
+            }
         }
         catch (Exception ex)
         {
