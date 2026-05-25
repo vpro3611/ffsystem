@@ -9,28 +9,28 @@ namespace FileSystemP.Core.MetadataService.Providers.SecurityAndACL;
 [SupportedOSPlatform("windows")]
 public class SecurityMetadataProvider : ISecurityMetadataProvider
 {
-    private string _className = nameof(SecurityMetadataProvider);
-    private static string _classNameStatic = nameof(SecurityMetadataProvider);
-
     private static FileSystemSecurity GetSecurity(string path)
     {
         if (!OperatingSystem.IsWindows())
         {
-            throw new AppException("Unsupported platform.", $"{_classNameStatic}.{nameof(GetSecurity)}()");
+            throw new AppException("Unsupported platform.", $"{nameof(SecurityMetadataProvider)}.{nameof(GetSecurity)}()");
         }
 
-        if (Directory.Exists(path))
+        FileSystemInfo info = Directory.Exists(path) 
+            ? new DirectoryInfo(path) 
+            : new FileInfo(path);
+
+        if (!info.Exists)
         {
-            DirectoryInfo dir = new DirectoryInfo(path);
-            return dir.GetAccessControl();
-        }
-        if (File.Exists(path))
-        {
-            FileInfo file = new FileInfo(path);
-            return file.GetAccessControl();
+             throw new AppException($"Path not found: {path}", $"{nameof(SecurityMetadataProvider)}.{nameof(GetSecurity)}()");
         }
 
-        throw new AppException($"Path not found: {path}", $"{_classNameStatic}.{nameof(GetSecurity)}()");
+        return info switch
+        {
+            DirectoryInfo d => d.GetAccessControl(),
+            FileInfo f => f.GetAccessControl(),
+            _ => throw new AppException($"Unsupported file system object: {path}")
+        };
     }
 
     public SecurityMetadataRecord GetSecurityMetadata(string path)
