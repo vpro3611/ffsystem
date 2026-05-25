@@ -17,7 +17,7 @@ public partial class PropertiesViewModel : ObservableObject
     private readonly ArchiveAttributeService _archiveAttributeService;
     private readonly NotContentIndexedAttributeService _notContentIndexedAttributeService;
     private readonly CompressAttributeService _compressAttributeService;
-    private readonly SecurityMetadataProvider _securityMetadataProvider = new();
+    private readonly ISecurityMetadataProvider _securityMetadataProvider;
     private readonly Action? _onChangesApplied;
 
     private bool _originalIsReadOnly;
@@ -97,7 +97,8 @@ public partial class PropertiesViewModel : ObservableObject
         ArchiveAttributeService archiveAttributeService,
         NotContentIndexedAttributeService notContentIndexedAttributeService,
         CompressAttributeService compressAttributeService,
-        Action? onChangesApplied)
+        Action? onChangesApplied,
+        ISecurityMetadataProvider? securityMetadataProvider = null)
     {
         _metadataProvider = metadataProvider;
         _readonlyAttributeService = readonlyAttributeService;
@@ -105,6 +106,7 @@ public partial class PropertiesViewModel : ObservableObject
         _archiveAttributeService = archiveAttributeService;
         _notContentIndexedAttributeService = notContentIndexedAttributeService;
         _compressAttributeService = compressAttributeService;
+        _securityMetadataProvider = (SecurityMetadataProvider?)securityMetadataProvider ?? new SecurityMetadataProvider();
         _onChangesApplied = onChangesApplied;
 
         LoadFromMetadata(metadata);
@@ -321,7 +323,7 @@ public partial class PropertiesViewModel : ObservableObject
             ApplyChangesRecursively = false;
 
             UpdateEditableAttributes(file.Attributes);
-            _security.LoadMetadata(_securityMetadataProvider.GetSecurityMetadata(TargetPath));
+            try { Security.LoadMetadata(_securityMetadataProvider.GetSecurityMetadata(TargetPath)); } catch { }
             return;
         }
 
@@ -342,7 +344,7 @@ public partial class PropertiesViewModel : ObservableObject
             ApplyChangesRecursively = true;
 
             UpdateEditableAttributes(dir.Attributes);
-            _security.LoadMetadata(_securityMetadataProvider.GetSecurityMetadata(TargetPath));
+            try { Security.LoadMetadata(_securityMetadataProvider.GetSecurityMetadata(TargetPath)); } catch { }
             return;
         }
 
