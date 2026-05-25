@@ -236,15 +236,26 @@
                         <TextBlock Text="{Binding Owner}" Foreground="{DynamicResource AppForeground}"/>
                     </StackPanel>
                     
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding Permissions}" AutoGenerateColumns="False" IsReadOnly="True" Background="{DynamicResource AppSurface}" BorderBrush="{DynamicResource AppMuted}" Foreground="{DynamicResource AppForeground}">
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding Permissions}" AutoGenerateColumns="False" IsReadOnly="True" 
+                              Background="{DynamicResource AppBackground}" 
+                              BorderBrush="{DynamicResource AppMuted}" 
+                              Foreground="{DynamicResource AppForeground}"
+                              RowBackground="{DynamicResource AppBackground}"
+                              AlternatingRowBackground="{DynamicResource AppSurface}">
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="{DynamicResource AppSurface}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AppForeground}"/>
+                            </Style>
+                        </DataGrid.Resources>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="User/Group" Binding="{Binding Identity}" Width="*" Foreground="{DynamicResource AppForeground}"/>
-                            <DataGridTextColumn Header="Windows" Binding="{Binding WindowsRights}" Width="*" Foreground="{DynamicResource AppForeground}"/>
-                            <DataGridTextColumn Header="rwx" Binding="{Binding LinuxRights}" Width="60" Foreground="{DynamicResource AppForeground}"/>
+                            <DataGridTextColumn Header="User/Group" Binding="{Binding Identity}" Width="*"/>
+                            <DataGridTextColumn Header="Windows" Binding="{Binding WindowsRights}" Width="*"/>
+                            <DataGridTextColumn Header="rwx" Binding="{Binding LinuxRights}" Width="60"/>
                             <DataGridCheckBoxColumn Header="Inherited" Binding="{Binding IsInherited, Mode=OneWay}" Width="80"/>
-
                         </DataGrid.Columns>
                     </DataGrid>
+
                 </Grid>
             </TabItem>
         </TabControl>
