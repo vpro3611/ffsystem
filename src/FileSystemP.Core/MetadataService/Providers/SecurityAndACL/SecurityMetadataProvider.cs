@@ -1,10 +1,12 @@
 ﻿using System.Security.AccessControl;
 using FileSystemP.Core.MetadataService.DTO;
 using System.Security.Principal;
+using System.Runtime.Versioning;
 
 
 namespace FileSystemP.Core.MetadataService.Providers.SecurityAndACL;
 
+[SupportedOSPlatform("windows")]
 public class SecurityMetadataProvider : ISecurityMetadataProvider
 {
     private string _className = nameof(SecurityMetadataProvider);
