@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using FileSystemP.Core.AttributeService;
 using FileSystemP.Core.MetadataService.DTO;
 using FileSystemP.Core.MetadataService.Providers.Ntfs;
+using FileSystemP.Core.MetadataService.Providers.SecurityAndACL;
 using FileSystemP.WPF.Helpers;
 using System.IO;
 using System.Windows.Media;
@@ -16,6 +17,7 @@ public partial class PropertiesViewModel : ObservableObject
     private readonly ArchiveAttributeService _archiveAttributeService;
     private readonly NotContentIndexedAttributeService _notContentIndexedAttributeService;
     private readonly CompressAttributeService _compressAttributeService;
+    private readonly SecurityMetadataProvider _securityMetadataProvider = new();
     private readonly Action? _onChangesApplied;
 
     private bool _originalIsReadOnly;
@@ -37,6 +39,7 @@ public partial class PropertiesViewModel : ObservableObject
     [ObservableProperty] private string? _rootPath;
     [ObservableProperty] private bool _isDirectory;
     [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] private SecurityTabViewModel _security = new();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasChanges))]
@@ -318,6 +321,7 @@ public partial class PropertiesViewModel : ObservableObject
             ApplyChangesRecursively = false;
 
             UpdateEditableAttributes(file.Attributes);
+            _security.LoadMetadata(_securityMetadataProvider.GetSecurityMetadata(TargetPath));
             return;
         }
 
@@ -338,6 +342,7 @@ public partial class PropertiesViewModel : ObservableObject
             ApplyChangesRecursively = true;
 
             UpdateEditableAttributes(dir.Attributes);
+            _security.LoadMetadata(_securityMetadataProvider.GetSecurityMetadata(TargetPath));
             return;
         }
 
