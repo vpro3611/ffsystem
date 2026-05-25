@@ -18,6 +18,10 @@ public partial class SecurityTabViewModel : ObservableObject
         Permissions.Clear();
         foreach (var entry in metadata.Permissions)
         {
+            if (int.TryParse(entry.Rights.ToString(), out _))
+            {
+                continue;
+            }
             Permissions.Add(new PermissionEntryViewModel(entry));
         }
     }
