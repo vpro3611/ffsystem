@@ -224,12 +224,26 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Security" IsEnabled="False">
-                <Grid Background="{DynamicResource AppBackground}">
-                    <TextBlock Text="Security tab will be implemented next."
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource AppMuted}"/>
+            <TabItem Header="Security">
+                <Grid Margin="12" DataContext="{Binding Security}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                        <TextBlock Text="Owner" FontWeight="Bold" Foreground="{DynamicResource AppForeground}"/>
+                        <TextBlock Text="{Binding Owner}" Foreground="{DynamicResource AppForeground}"/>
+                    </StackPanel>
+                    
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding Permissions}" AutoGenerateColumns="False" IsReadOnly="True" Background="{DynamicResource AppSurface}" BorderBrush="{DynamicResource AppMuted}" Foreground="{DynamicResource AppForeground}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="User/Group" Binding="{Binding Identity}" Width="*" Foreground="{DynamicResource AppForeground}"/>
+                            <DataGridTextColumn Header="Windows" Binding="{Binding WindowsRights}" Width="*" Foreground="{DynamicResource AppForeground}"/>
+                            <DataGridTextColumn Header="rwx" Binding="{Binding LinuxRights}" Width="60" Foreground="{DynamicResource AppForeground}"/>
+                            <DataGridCheckBoxColumn Header="Inherited" Binding="{Binding IsInherited}" Width="80"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
                 </Grid>
             </TabItem>
         </TabControl>
