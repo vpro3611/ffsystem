@@ -228,15 +228,21 @@
                 <Grid Margin="12" DataContext="{Binding Security}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     
                     <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                        <TextBlock Text="Object Name" FontWeight="Bold" Foreground="{DynamicResource AppForeground}"/>
+                        <TextBlock Text="{Binding DataContext.TargetPath, RelativeSource={RelativeSource AncestorType=Window}}" Foreground="{DynamicResource AppForeground}" TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Margin="0,0,0,12">
                         <TextBlock Text="Owner" FontWeight="Bold" Foreground="{DynamicResource AppForeground}"/>
                         <TextBlock Text="{Binding Owner}" Foreground="{DynamicResource AppForeground}"/>
                     </StackPanel>
                     
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding Permissions}" AutoGenerateColumns="False" IsReadOnly="True" 
+                    <DataGrid Grid.Row="2" ItemsSource="{Binding Permissions}" AutoGenerateColumns="False" IsReadOnly="True" 
                               Background="{DynamicResource AppBackground}" 
                               BorderBrush="{DynamicResource AppMuted}" 
                               Foreground="{DynamicResource AppForeground}"
