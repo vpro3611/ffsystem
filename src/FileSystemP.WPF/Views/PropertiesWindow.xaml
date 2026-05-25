@@ -241,7 +241,8 @@
                             <DataGridTextColumn Header="User/Group" Binding="{Binding Identity}" Width="*" Foreground="{DynamicResource AppForeground}"/>
                             <DataGridTextColumn Header="Windows" Binding="{Binding WindowsRights}" Width="*" Foreground="{DynamicResource AppForeground}"/>
                             <DataGridTextColumn Header="rwx" Binding="{Binding LinuxRights}" Width="60" Foreground="{DynamicResource AppForeground}"/>
-                            <DataGridCheckBoxColumn Header="Inherited" Binding="{Binding IsInherited}" Width="80"/>
+                            <DataGridCheckBoxColumn Header="Inherited" Binding="{Binding IsInherited, Mode=OneWay}" Width="80"/>
+
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
