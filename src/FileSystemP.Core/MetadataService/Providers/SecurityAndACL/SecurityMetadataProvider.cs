@@ -14,19 +14,23 @@ public class SecurityMetadataProvider : ISecurityMetadataProvider
 
     private static FileSystemSecurity GetSecurity(string path)
     {
-        if (Directory.Exists(path) && OperatingSystem.IsWindows())
+        if (!OperatingSystem.IsWindows())
+        {
+            throw new AppException("Unsupported platform.", $"{_classNameStatic}.{nameof(GetSecurity)}()");
+        }
+
+        if (Directory.Exists(path))
         {
             DirectoryInfo dir = new DirectoryInfo(path);
             return dir.GetAccessControl();
         }
-        if (File.Exists(path) && OperatingSystem.IsWindows())
+        if (File.Exists(path))
         {
             FileInfo file = new FileInfo(path);
             return file.GetAccessControl();
         }
 
-        throw new AppException("Unsupported platform.", $"{_classNameStatic}.{nameof(GetSecurity)}()");
-
+        throw new AppException($"Path not found: {path}", $"{_classNameStatic}.{nameof(GetSecurity)}()");
     }
 
     public SecurityMetadataRecord GetSecurityMetadata(string path)

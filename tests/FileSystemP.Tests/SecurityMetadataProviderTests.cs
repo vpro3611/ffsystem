@@ -1,3 +1,4 @@
+using FileSystemP.Core;
 using FileSystemP.Core.MetadataService.Providers.SecurityAndACL;
 using Xunit;
 
@@ -40,5 +41,14 @@ public class SecurityMetadataProviderTests
         {
             if (Directory.Exists(tempDir)) Directory.Delete(tempDir);
         }
+    }
+
+    [Fact]
+    public void GetSecurityMetadata_PathDoesNotExist_ThrowsAppExceptionWithCorrectMessage()
+    {
+        string nonExistentPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+
+        var exception = Assert.Throws<AppException>(() => _provider.GetSecurityMetadata(nonExistentPath));
+        Assert.Contains("Path not found", exception.Message);
     }
 }
