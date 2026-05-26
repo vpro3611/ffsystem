@@ -1,5 +1,6 @@
 using FileSystemP.WPF.ViewModels;
 using System.Windows;
+using Tulpep.ActiveDirectoryObjectPicker;
 
 namespace FileSystemP.WPF.Views;
 
@@ -35,11 +36,23 @@ public partial class PermissionEditorWindow : Window
 
     private void Add_Click(object sender, RoutedEventArgs e)
     {
-        string? result = InputDialog.Show("Enter the object name to select:", "Everyone");
-        if (result != null)
+        var picker = new DirectoryObjectPickerDialog()
         {
-            _viewModel.NewIdentityName = result;
-            _viewModel.AddIdentityCommand.Execute(null);
+            AllowedObjectTypes = ObjectTypes.Users | ObjectTypes.Groups | ObjectTypes.BuiltInGroups,
+            AllowedLocations = Locations.All,
+            MultiSelect = true
+        };
+
+        using (picker)
+        {
+            if (picker.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                foreach (var selected in picker.SelectedObjects)
+                {
+                    _viewModel.NewIdentityName = selected.Name;
+                    _viewModel.AddIdentityCommand.Execute(null);
+                }
+            }
         }
     }
 
