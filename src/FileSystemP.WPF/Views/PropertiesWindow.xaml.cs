@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using FileSystemP.WPF.ViewModels;
+using FileSystemP.Core.MetadataService.Providers.SecurityAndACL;
 
 namespace FileSystemP.WPF.Views;
 
@@ -31,6 +32,25 @@ public partial class PropertiesWindow : Window
     private void Advanced_Click(object sender, RoutedEventArgs e)
     {
         AdvancedAttributesWindow.ShowFor(_viewModel, this);
+    }
+
+    private void EditSecurity_Click(object sender, RoutedEventArgs e)
+    {
+        var editorViewModel = new PermissionEditorViewModel(_viewModel.TargetPath, new SecurityModifierService());
+        editorViewModel.LoadPermissions(_viewModel.Security.Records);
+
+        var editorWindow = new PermissionEditorWindow(editorViewModel);
+        editorWindow.Owner = this;
+
+        if (editorWindow.ShowDialog() == true)
+        {
+            ReloadMetadata();
+        }
+    }
+
+    private void ReloadMetadata()
+    {
+        _viewModel.RefreshMetadata();
     }
 
     private async void Apply_Click(object sender, RoutedEventArgs e)
