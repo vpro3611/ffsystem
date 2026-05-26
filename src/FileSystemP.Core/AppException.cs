@@ -6,8 +6,8 @@ public class AppException : Exception
 
     public AppException(
         string message,
-        string? classRootCauseName,
-        string? source,
+        string? classRootCauseName = null,
+        string? source = null,
         Exception? innerException = null
     ) : base(message, innerException)
     {

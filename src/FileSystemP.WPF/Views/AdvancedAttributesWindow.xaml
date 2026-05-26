@@ -1,0 +1,108 @@
+<Window x:Class="FileSystemP.WPF.Views.AdvancedAttributesWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:helpers="clr-namespace:FileSystemP.WPF.Helpers"
+        Title="Advanced Attributes"
+        Width="500"
+        Height="360"
+        MinWidth="460"
+        MinHeight="320"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Background="{DynamicResource AppBackground}">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <helpers:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Margin="0,0,0,8"
+                   Foreground="{DynamicResource AppForeground}"
+                   FontSize="15"
+                   FontWeight="SemiBold"
+                   Text="Choose the settings you want for this item." />
+
+        <TextBlock Grid.Row="1"
+                   Margin="0,0,0,14"
+                   Foreground="{DynamicResource AppMuted}"
+                   TextWrapping="Wrap"
+                   Text="Changes are applied when you confirm the Properties dialog." />
+
+        <GroupBox Grid.Row="2"
+                  Margin="0,0,0,12"
+                  Header="Archive and Index attributes"
+                  Foreground="{DynamicResource AppForeground}">
+            <StackPanel Margin="12,10,12,12">
+                <CheckBox IsChecked="{Binding IsArchive}"
+                          Margin="0,0,0,10"
+                          Foreground="{DynamicResource AppForeground}"
+                          Content="{Binding ArchiveLabel}" />
+                <CheckBox IsChecked="{Binding AllowsContentIndexing}"
+                          Foreground="{DynamicResource AppForeground}"
+                          Content="{Binding ContentIndexingLabel}" />
+            </StackPanel>
+        </GroupBox>
+
+        <GroupBox Grid.Row="3"
+                  Margin="0,0,0,12"
+                  Header="Compress attributes"
+                  Foreground="{DynamicResource AppForeground}">
+            <StackPanel Margin="12,10,12,12">
+                <CheckBox IsChecked="{Binding IsCompressed}"
+                          IsEnabled="{Binding SupportsCompression}"
+                          Margin="0,0,0,10"
+                          Foreground="{DynamicResource AppForeground}"
+                          Content="Compress contents to save disk space" />
+                <CheckBox IsChecked="{Binding ApplyChangesRecursively}"
+                          Visibility="{Binding IsDirectory, Converter={StaticResource BooleanToVisibilityConverter}}"
+                          Foreground="{DynamicResource AppForeground}"
+                          Content="Apply changes to this folder, subfolders, and files" />
+                <Border Margin="0,10,0,0"
+                        Padding="10,8"
+                        Background="{DynamicResource AppSurface}"
+                        BorderBrush="{DynamicResource AppMuted}"
+                        BorderThickness="1"
+                        Visibility="{Binding ShowDirectoryCompressionWarning, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Foreground="{DynamicResource AppForeground}"
+                               TextWrapping="Wrap"
+                               Text="{Binding DirectoryCompressionWarningText}" />
+                </Border>
+                <TextBlock Margin="0,10,0,0"
+                           Visibility="{Binding SupportsCompression, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                           Foreground="{DynamicResource AppMuted}"
+                           TextWrapping="Wrap"
+                           Text="Compression is only available on Windows NTFS volumes." />
+            </StackPanel>
+        </GroupBox>
+
+        <Border Grid.Row="4"
+                Padding="0,12,0,0"
+                BorderBrush="{DynamicResource AppMuted}"
+                BorderThickness="0,1,0,0">
+            <DockPanel LastChildFill="False">
+                <Button DockPanel.Dock="Right"
+                        Width="88"
+                        Margin="8,0,0,0"
+                        Padding="0,6"
+                        IsDefault="True"
+                        Click="Ok_Click"
+                        Content="OK" />
+                <Button DockPanel.Dock="Right"
+                        Width="88"
+                        Padding="0,6"
+                        IsCancel="True"
+                        Content="Cancel" />
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

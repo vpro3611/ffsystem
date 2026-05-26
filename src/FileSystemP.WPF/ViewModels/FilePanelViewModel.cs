@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FileSystemP.Core;
+using FileSystemP.Core.MetadataService.Providers.Ntfs;
 using FileSystemP.Core.Services;
 using FileSystemP.WPF.Helpers;
 using FileSystemP.WPF.Models;
@@ -16,6 +17,7 @@ namespace FileSystemP.WPF.ViewModels;
 public partial class FilePanelViewModel : ObservableObject
 {
     private readonly Action<string> _navigate;
+    private readonly INtfsMetadataProvider _metadataProvider;
     private string _currentPath = string.Empty;
     private readonly Stack<IUndoAction> _undoStack = new();
 
@@ -39,9 +41,10 @@ public partial class FilePanelViewModel : ObservableObject
         PasteCommand.NotifyCanExecuteChanged();
     }
 
-    public FilePanelViewModel(Action<string> navigate)
+    public FilePanelViewModel(Action<string> navigate, INtfsMetadataProvider metadataProvider)
     {
         _navigate = navigate;
+        _metadataProvider = metadataProvider;
     }
 
     public async Task LoadEntries(string path)
@@ -89,6 +92,37 @@ public partial class FilePanelViewModel : ObservableObject
             {
                 MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+    }
+
+    [RelayCommand]
+    private void ShowProperties()
+    {
+        if (SelectedEntry is null) return;
+        ShowPropertiesForPath(SelectedEntry.FilePath, SelectedEntry.IsDirectory);
+    }
+
+    public void ShowPropertiesForPath(string path, bool isDirectory)
+    {
+        try
+        {
+            object metadata = isDirectory
+                ? _metadataProvider.GetDirectoryMetadata(path)
+                : _metadataProvider.GetFileMetadata(path);
+
+            bool changed = PropertiesWindow.ShowFor(
+                metadata,
+                Application.Current.MainWindow,
+                onChangesApplied: () => _ = LoadEntries(_currentPath));
+
+            if (changed)
+            {
+                _ = LoadEntries(_currentPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Error fetching metadata", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

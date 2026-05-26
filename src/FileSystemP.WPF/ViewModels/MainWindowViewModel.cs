@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FileSystemP.Core.MetadataService.Providers.Ntfs;
 using FileSystemP.WPF.ViewModels;
 using System.Collections.Generic;
 
@@ -18,8 +19,9 @@ public partial class MainWindowViewModel : ObservableObject
 
     public MainWindowViewModel()
     {
+        var metadataProvider = new NtfsMetadataProvider();
         Tree = new FileTreeViewModel(NavigateTo);
-        Panel = new FilePanelViewModel(NavigateTo);
+        Panel = new FilePanelViewModel(NavigateTo, metadataProvider);
     }
 
     partial void OnCurrentPathChanged(string value)
@@ -56,4 +58,13 @@ public partial class MainWindowViewModel : ObservableObject
         NavigateForwardCommand.NotifyCanExecuteChanged();
     }
     private bool CanGoForward() => _forwardStack.Count > 0;
+
+    [RelayCommand]
+    private void ShowTreeNodeProperties(FileTreeNode? node)
+    {
+        if (node is null)
+            return;
+
+        Panel.ShowPropertiesForPath(node.FullPath, isDirectory: true);
+    }
 }
