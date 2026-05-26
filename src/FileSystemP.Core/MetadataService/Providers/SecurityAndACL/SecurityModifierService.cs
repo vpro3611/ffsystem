@@ -27,6 +27,7 @@ public class SecurityModifierService : ISecurityModifierService
 
     public void ApplySecurityChanges(string path, SecurityTransaction transaction)
     {
+        System.Diagnostics.Debug.WriteLine($"ApplySecurityChanges for {path}");
         FileSystemInfo info = Directory.Exists(path) ? new DirectoryInfo(path) : new FileInfo(path);
         FileSystemSecurity security = info switch
         {
@@ -37,29 +38,39 @@ public class SecurityModifierService : ISecurityModifierService
 
         if (transaction.IsInheritanceProtected.HasValue)
         {
+            System.Diagnostics.Debug.WriteLine($"Setting inheritance protection: {transaction.IsInheritanceProtected.Value}");
             security.SetAccessRuleProtection(transaction.IsInheritanceProtected.Value, transaction.PreserveInheritanceOnProtect);
         }
 
         foreach (var change in transaction.Changes)
         {
-            if (change.OldEntry != null)
+            if (change.OldEntry != null && !change.OldEntry.IsInherited)
             {
-                security.RemoveAccessRule(new FileSystemAccessRule(
+                var rule = new FileSystemAccessRule(
                     new NTAccount(change.OldEntry.Identity),
                     change.OldEntry.Rights,
-                    change.OldEntry.Type));
+                    change.OldEntry.InheritanceFlags,
+                    change.OldEntry.PropagationFlags,
+                    change.OldEntry.Type);
+                bool removed = security.RemoveAccessRule(rule); // RemoveAccessRule is generally what we want for explicit rules
+                System.Diagnostics.Debug.WriteLine($"Removing explicit rule for {change.OldEntry.Identity}: {removed} (Rights: {change.OldEntry.Rights})");
             }
 
             if (change.NewEntry != null)
             {
-                security.AddAccessRule(new FileSystemAccessRule(
+                var rule = new FileSystemAccessRule(
                     new NTAccount(change.NewEntry.Identity),
                     change.NewEntry.Rights,
-                    change.NewEntry.Type));
+                    change.NewEntry.InheritanceFlags,
+                    change.NewEntry.PropagationFlags,
+                    change.NewEntry.Type);
+                security.AddAccessRule(rule);
+                System.Diagnostics.Debug.WriteLine($"Adding rule for {change.NewEntry.Identity} (Rights: {change.NewEntry.Rights})");
             }
         }
 
         if (info is DirectoryInfo di) di.SetAccessControl((DirectorySecurity)security);
         else if (info is FileInfo fi) fi.SetAccessControl((FileSecurity)security);
+        System.Diagnostics.Debug.WriteLine("SetAccessControl completed");
     }
 }

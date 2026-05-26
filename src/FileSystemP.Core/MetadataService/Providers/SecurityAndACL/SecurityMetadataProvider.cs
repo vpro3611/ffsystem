@@ -53,7 +53,9 @@ public class SecurityMetadataProvider : ISecurityMetadataProvider
                     Identity: rule.IdentityReference.Value,
                     Rights: rule.FileSystemRights,
                     Type: rule.AccessControlType,
-                    IsInherited: rule.IsInherited
+                    IsInherited: rule.IsInherited,
+                    InheritanceFlags: rule.InheritanceFlags,
+                    PropagationFlags: rule.PropagationFlags
                 )
             );
         }

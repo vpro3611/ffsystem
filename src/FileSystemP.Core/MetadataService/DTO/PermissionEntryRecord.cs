@@ -6,7 +6,9 @@ public record PermissionEntryRecord(
     string Identity,
     FileSystemRights Rights,
     AccessControlType Type,
-    bool IsInherited
+    bool IsInherited,
+    InheritanceFlags InheritanceFlags = InheritanceFlags.None,
+    PropagationFlags PropagationFlags = PropagationFlags.None
 );
 
 public record SecurityTransaction(
