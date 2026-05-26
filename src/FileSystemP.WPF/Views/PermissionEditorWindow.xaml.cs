@@ -39,20 +39,28 @@ public partial class PermissionEditorWindow : Window
         var picker = new DirectoryObjectPickerDialog()
         {
             AllowedObjectTypes = ObjectTypes.Users | ObjectTypes.Groups | ObjectTypes.BuiltInGroups,
-            AllowedLocations = Locations.All,
+            AllowedLocations = Locations.LocalComputer | Locations.JoinedDomain | Locations.Workgroup,
+            DefaultLocations = Locations.LocalComputer,
             MultiSelect = true
         };
 
-        using (picker)
+        try
         {
-            if (picker.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            using (picker)
             {
-                foreach (var selected in picker.SelectedObjects)
+                if (picker.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
-                    _viewModel.NewIdentityName = selected.Name;
-                    _viewModel.AddIdentityCommand.Execute(null);
+                    foreach (var selected in picker.SelectedObjects)
+                    {
+                        _viewModel.NewIdentityName = selected.Name;
+                        _viewModel.AddIdentityCommand.Execute(null);
+                    }
                 }
             }
+        }
+        catch (System.Runtime.InteropServices.COMException ex)
+        {
+            MessageBox.Show($"Failed to open user picker: {ex.Message}\n\nPlease ensure your computer is connected to the network if using a domain account.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
