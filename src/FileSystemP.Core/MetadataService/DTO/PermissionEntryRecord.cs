@@ -1,4 +1,4 @@
-﻿using System.Security.AccessControl;
+using System.Security.AccessControl;
 
 namespace FileSystemP.Core.MetadataService.DTO;
 
@@ -7,4 +7,15 @@ public record PermissionEntryRecord(
     FileSystemRights Rights,
     AccessControlType Type,
     bool IsInherited
+);
+
+public record SecurityTransaction(
+    bool? IsInheritanceProtected,
+    bool PreserveInheritanceOnProtect,
+    IReadOnlyList<PermissionChange> Changes
+);
+
+public record PermissionChange(
+    PermissionEntryRecord? OldEntry,
+    PermissionEntryRecord? NewEntry
 );
