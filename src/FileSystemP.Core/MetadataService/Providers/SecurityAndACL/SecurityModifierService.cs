@@ -58,14 +58,18 @@ public class SecurityModifierService : ISecurityModifierService
 
             if (change.NewEntry != null)
             {
+                // Inheritance flags are only applicable for directories. 
+                // For files, they must be set to InheritanceFlags.None.
+                var inheritanceFlags = info is DirectoryInfo ? change.NewEntry.InheritanceFlags : InheritanceFlags.None;
+                
                 var rule = new FileSystemAccessRule(
                     new NTAccount(change.NewEntry.Identity),
                     change.NewEntry.Rights,
-                    change.NewEntry.InheritanceFlags,
+                    inheritanceFlags,
                     change.NewEntry.PropagationFlags,
                     change.NewEntry.Type);
                 security.AddAccessRule(rule);
-                System.Diagnostics.Debug.WriteLine($"Adding rule for {change.NewEntry.Identity} (Rights: {change.NewEntry.Rights})");
+                System.Diagnostics.Debug.WriteLine($"Adding rule for {change.NewEntry.Identity} (Rights: {change.NewEntry.Rights}, Flags: {inheritanceFlags})");
             }
         }
 
