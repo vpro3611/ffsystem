@@ -43,6 +43,10 @@ public partial class PropertiesViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasChanges))]
+    private SecurityTransaction? _pendingSecurityTransaction;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasChanges))]
     private bool _isReadOnly;
 
     [ObservableProperty]
@@ -117,7 +121,8 @@ public partial class PropertiesViewModel : ObservableObject
         IsHidden != _originalIsHidden ||
         IsArchive != _originalIsArchive ||
         AllowsContentIndexing != _originalAllowsContentIndexing ||
-        IsCompressed != _originalIsCompressed;
+        IsCompressed != _originalIsCompressed ||
+        PendingSecurityTransaction != null;
 
     public bool SupportsRecursiveAttributeChanges => IsDirectory;
 
@@ -155,15 +160,18 @@ public partial class PropertiesViewModel : ObservableObject
     {
         if (!HasChanges)
         {
+            System.Diagnostics.Debug.WriteLine("SaveChangesAsync: No changes");
             return;
         }
 
         IsBusy = true;
         try
         {
+            System.Diagnostics.Debug.WriteLine("SaveChangesAsync: Applying changes...");
             await Task.Run(ApplyPendingChanges);
             ReloadMetadata();
             _onChangesApplied?.Invoke();
+            System.Diagnostics.Debug.WriteLine("SaveChangesAsync: Changes applied and metadata reloaded");
         }
         finally
         {
@@ -178,7 +186,18 @@ public partial class PropertiesViewModel : ObservableObject
         ApplyArchiveChanges();
         ApplyContentIndexingChanges();
         ApplyCompressionChanges();
+        ApplySecurityChanges();
         ApplyReadonlyAfterOtherOperationsIfNeeded();
+    }
+
+    private void ApplySecurityChanges()
+    {
+        if (PendingSecurityTransaction != null)
+        {
+            var modifierService = new SecurityModifierService();
+            modifierService.ApplySecurityChanges(TargetPath, PendingSecurityTransaction);
+            PendingSecurityTransaction = null;
+        }
     }
 
     private void ApplyReadonlyBeforeOtherOperationsIfNeeded()
@@ -295,8 +314,14 @@ public partial class PropertiesViewModel : ObservableObject
         }
     }
 
+    public void RefreshMetadata()
+    {
+        ReloadMetadata();
+    }
+
     private void ReloadMetadata()
     {
+        System.Diagnostics.Debug.WriteLine($"Reloading metadata for {TargetPath}");
         object metadata = IsDirectory
             ? _metadataProvider.GetDirectoryMetadata(TargetPath)
             : _metadataProvider.GetFileMetadata(TargetPath);
