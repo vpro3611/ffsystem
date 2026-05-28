@@ -215,12 +215,32 @@
                 </ScrollViewer>
             </TabItem>
 
-            <TabItem Header="Details" IsEnabled="False">
+            <TabItem Header="Details">
                 <Grid Background="{DynamicResource AppBackground}">
-                    <TextBlock Text="Details tab will be implemented next."
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource AppMuted}"/>
+                    <DataGrid ItemsSource="{Binding ShellProperties}" 
+                              AutoGenerateColumns="False" 
+                              IsReadOnly="True" 
+                              Background="{DynamicResource AppBackground}" 
+                              BorderBrush="{DynamicResource AppMuted}" 
+                              Foreground="{DynamicResource AppForeground}"
+                              RowBackground="{DynamicResource AppBackground}"
+                              AlternatingRowBackground="{DynamicResource AppSurface}"
+                              Margin="12"
+                              HeadersVisibility="Column">
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="{DynamicResource AppSurface}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AppForeground}"/>
+                                <Setter Property="Padding" Value="4,6"/>
+                                <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource AppMuted}"/>
+                            </Style>
+                        </DataGrid.Resources>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Property" Binding="{Binding Key}" Width="2*"/>
+                            <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="3*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
                 </Grid>
             </TabItem>
 

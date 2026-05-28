@@ -1,7 +1,9 @@
 using FileSystemP.Core.AttributeService;
 using FileSystemP.Core.MetadataService.DTO;
 using FileSystemP.Core.MetadataService.Providers.Ntfs;
+using FileSystemP.Core.MetadataService.Providers.ShellMetadata;
 using FileSystemP.WPF.ViewModels;
+using Moq;
 using System.IO;
 
 namespace FileSystemP.Tests;
@@ -9,11 +11,15 @@ namespace FileSystemP.Tests;
 public class PropertiesViewModelTests : IDisposable
 {
     private readonly string _tempDir;
+    private readonly Mock<IShellMetadataProviderInterface> _shellMetadataMock;
 
     public PropertiesViewModelTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"fsp-props-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
+        _shellMetadataMock = new Mock<IShellMetadataProviderInterface>();
+        _shellMetadataMock.Setup(m => m.GetShellMetadata(It.IsAny<string>()))
+            .Returns(new ShellMetadataRecord(new List<ShellPropertyRecord>()));
     }
 
     public void Dispose()
@@ -56,7 +62,16 @@ public class PropertiesViewModelTests : IDisposable
             Attributes: FileAttributes.Archive | FileAttributes.Hidden
         );
 
-        var viewModel = new PropertiesViewModel(record);
+        var viewModel = new PropertiesViewModel(
+            record,
+            new NtfsMetadataProvider(),
+            _shellMetadataMock.Object,
+            new ReadonlyAttributeService(),
+            new HiddenAttributeService(),
+            new ArchiveAttributeService(),
+            new NotContentIndexedAttributeService(),
+            new CompressAttributeService(),
+            null);
 
         Assert.Equal("test.txt", viewModel.Name);
         Assert.Equal("TXT File", viewModel.Type);
@@ -95,7 +110,16 @@ public class PropertiesViewModelTests : IDisposable
             Attributes: FileAttributes.Directory | FileAttributes.ReadOnly | FileAttributes.NotContentIndexed
         );
 
-        var viewModel = new PropertiesViewModel(record);
+        var viewModel = new PropertiesViewModel(
+            record,
+            new NtfsMetadataProvider(),
+            _shellMetadataMock.Object,
+            new ReadonlyAttributeService(),
+            new HiddenAttributeService(),
+            new ArchiveAttributeService(),
+            new NotContentIndexedAttributeService(),
+            new CompressAttributeService(),
+            null);
 
         Assert.Equal("testdir", viewModel.Name);
         Assert.Equal("File Folder", viewModel.Type);
@@ -129,6 +153,7 @@ public class PropertiesViewModelTests : IDisposable
         var viewModel = new PropertiesViewModel(
             metadataProvider.GetFileMetadata(filePath),
             metadataProvider,
+            _shellMetadataMock.Object,
             new ReadonlyAttributeService(),
             new HiddenAttributeService(),
             new ArchiveAttributeService(),
@@ -168,6 +193,7 @@ public class PropertiesViewModelTests : IDisposable
         var viewModel = new PropertiesViewModel(
             metadataProvider.GetDirectoryMetadata(dirPath),
             metadataProvider,
+            _shellMetadataMock.Object,
             new ReadonlyAttributeService(),
             new HiddenAttributeService(),
             new ArchiveAttributeService(),
@@ -201,6 +227,7 @@ public class PropertiesViewModelTests : IDisposable
         var viewModel = new PropertiesViewModel(
             metadataProvider.GetFileMetadata(filePath),
             metadataProvider,
+            _shellMetadataMock.Object,
             new ReadonlyAttributeService(),
             new HiddenAttributeService(),
             new ArchiveAttributeService(),
@@ -234,7 +261,16 @@ public class PropertiesViewModelTests : IDisposable
             Attributes: FileAttributes.Normal
         );
 
-        var viewModel = new PropertiesViewModel(record);
+        var viewModel = new PropertiesViewModel(
+            record,
+            new NtfsMetadataProvider(),
+            _shellMetadataMock.Object,
+            new ReadonlyAttributeService(),
+            new HiddenAttributeService(),
+            new ArchiveAttributeService(),
+            new NotContentIndexedAttributeService(),
+            new CompressAttributeService(),
+            null);
 
         Assert.Contains(expectedUnit, viewModel.Size);
         Assert.Contains(expectedLeadingValue, viewModel.Size);
