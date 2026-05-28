@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using FileSystemP.Core.AttributeService;
 using FileSystemP.Core.MetadataService.DTO;
 using FileSystemP.Core.MetadataService.Providers.Ntfs;
+using FileSystemP.Core.MetadataService.Providers.ShellMetadata;
 using FileSystemP.Core.MetadataService.Providers.SecurityAndACL;
 using FileSystemP.WPF.Helpers;
 using System.IO;
@@ -12,6 +13,7 @@ namespace FileSystemP.WPF.ViewModels;
 public partial class PropertiesViewModel : ObservableObject
 {
     private readonly INtfsMetadataProvider _metadataProvider;
+    private readonly IShellMetadataProviderInterface _shellMetadataProvider;
     private readonly ReadonlyAttributeService _readonlyAttributeService;
     private readonly HiddenAttributeService _hiddenAttributeService;
     private readonly ArchiveAttributeService _archiveAttributeService;
@@ -39,6 +41,7 @@ public partial class PropertiesViewModel : ObservableObject
     [ObservableProperty] private string? _rootPath;
     [ObservableProperty] private bool _isDirectory;
     [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] private IEnumerable<KeyValuePair<string, string>>? _shellProperties;
     [ObservableProperty] private SecurityTabViewModel _security = new();
 
     [ObservableProperty]
@@ -71,6 +74,7 @@ public partial class PropertiesViewModel : ObservableObject
         : this(
             metadata,
             new NtfsMetadataProvider(),
+            new ShellMetadataProvider(),
             new ReadonlyAttributeService(),
             new HiddenAttributeService(),
             new ArchiveAttributeService(),
@@ -84,6 +88,7 @@ public partial class PropertiesViewModel : ObservableObject
         : this(
             metadata,
             new NtfsMetadataProvider(),
+            new ShellMetadataProvider(),
             new ReadonlyAttributeService(),
             new HiddenAttributeService(),
             new ArchiveAttributeService(),
@@ -96,6 +101,7 @@ public partial class PropertiesViewModel : ObservableObject
     public PropertiesViewModel(
         object metadata,
         INtfsMetadataProvider metadataProvider,
+        IShellMetadataProviderInterface shellMetadataProvider,
         ReadonlyAttributeService readonlyAttributeService,
         HiddenAttributeService hiddenAttributeService,
         ArchiveAttributeService archiveAttributeService,
@@ -105,12 +111,13 @@ public partial class PropertiesViewModel : ObservableObject
         ISecurityMetadataProvider? securityMetadataProvider = null)
     {
         _metadataProvider = metadataProvider;
+        _shellMetadataProvider = shellMetadataProvider;
         _readonlyAttributeService = readonlyAttributeService;
         _hiddenAttributeService = hiddenAttributeService;
         _archiveAttributeService = archiveAttributeService;
         _notContentIndexedAttributeService = notContentIndexedAttributeService;
         _compressAttributeService = compressAttributeService;
-        _securityMetadataProvider = (SecurityMetadataProvider?)securityMetadataProvider ?? new SecurityMetadataProvider();
+        _securityMetadataProvider = securityMetadataProvider ?? new SecurityMetadataProvider();
         _onChangesApplied = onChangesApplied;
 
         LoadFromMetadata(metadata);
@@ -349,6 +356,7 @@ public partial class PropertiesViewModel : ObservableObject
 
             UpdateEditableAttributes(file.Attributes);
             try { Security.LoadMetadata(_securityMetadataProvider.GetSecurityMetadata(TargetPath)); } catch { }
+            LoadShellMetadata();
             return;
         }
 
@@ -370,10 +378,53 @@ public partial class PropertiesViewModel : ObservableObject
 
             UpdateEditableAttributes(dir.Attributes);
             try { Security.LoadMetadata(_securityMetadataProvider.GetSecurityMetadata(TargetPath)); } catch { }
+            LoadShellMetadata();
             return;
         }
 
         throw new ArgumentException("Unsupported metadata type.", nameof(metadata));
+    }
+
+    private void LoadShellMetadata()
+    {
+        try
+        {
+            var metadata = _shellMetadataProvider.GetShellMetadata(TargetPath);
+            
+            var uiProperties = new List<KeyValuePair<string, string>>();
+            
+            foreach (var prop in metadata.Properties.OrderBy(p => p.DisplayName))
+            {
+                string label = $"{prop.DisplayName} : ({prop.CanonicalName})";
+                string valueStr = FormatPropertyValue(prop.Value);
+                
+                uiProperties.Add(new KeyValuePair<string, string>(label, valueStr));
+            }
+            
+            ShellProperties = uiProperties;
+        }
+        catch
+        {
+            ShellProperties = new List<KeyValuePair<string, string>>();
+        }
+    }
+
+    private static string FormatPropertyValue(object? value)
+    {
+        if (value == null) return "-";
+
+        if (value is string[] array)
+        {
+            return array.Length > 0 ? string.Join("; ", array) : "-";
+        }
+
+        if (value is DateTime dt)
+        {
+            return dt.ToString("g");
+        }
+
+        string str = value.ToString() ?? "";
+        return string.IsNullOrWhiteSpace(str) ? "-" : str;
     }
 
     private void UpdateEditableAttributes(FileAttributes attributes)
