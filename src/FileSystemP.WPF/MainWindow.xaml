@@ -71,6 +71,15 @@
             </Style.Triggers>
         </Style>
 
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+        <x:Array x:Key="SearchTargetTypes" Type="local:SearchTargetType"
+                 xmlns:local="clr-namespace:FileSystemP.Core.SearchService.Options;assembly=FileSystemP.Core">
+            <local:SearchTargetType>Both</local:SearchTargetType>
+            <local:SearchTargetType>Files</local:SearchTargetType>
+            <local:SearchTargetType>Directories</local:SearchTargetType>
+        </x:Array>
+
         <!-- Empty space context menu — PlacementTarget is ListView whose DataContext IS MainWindowViewModel -->
         <ContextMenu x:Key="EmptySpaceMenu">
             <MenuItem Header="Paste"                 Command="{Binding PlacementTarget.DataContext.Panel.PasteCommand,            RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
@@ -83,6 +92,7 @@
 
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -135,8 +145,61 @@
                     Style="{StaticResource ToolbarButton}" Padding="10,4" FontSize="12" ToolTip="Toggle Search Panel"/>
         </StackPanel>
 
+        <!-- Search Panel -->
+        <Border Grid.Row="2" Background="{DynamicResource AppSurface}" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource AppMuted}"
+                Visibility="{Binding Search.IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel Padding="10" Orientation="Vertical">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="SearchBox" Text="{Binding Search.Pattern, UpdateSourceTrigger=PropertyChanged}" 
+                             Foreground="{DynamicResource AppForeground}" Background="Transparent" BorderThickness="0,0,0,1" Margin="0,0,10,0"
+                             Padding="2,4" VerticalContentAlignment="Center">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="TextBox">
+                                            <Grid>
+                                                <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+                                                    <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                                                </Border>
+                                                <TextBlock x:Name="placeholder" Text="Search Pattern..." Foreground="{DynamicResource AppMuted}" Padding="{TemplateBinding Padding}" Visibility="Collapsed" IsHitTestVisible="False"/>
+                                            </Grid>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="Text" Value="">
+                                                    <Setter TargetName="placeholder" Property="Visibility" Value="Visible"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
+                    <ComboBox Grid.Column="1" SelectedItem="{Binding Search.TargetType}" ItemsSource="{Binding Source={StaticResource SearchTargetTypes}}" Width="100" Margin="0,0,10,0"
+                              VerticalContentAlignment="Center" Background="{DynamicResource AppSurface}" Foreground="{DynamicResource AppForeground}"/>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button Content="Search" Command="{Binding Search.StartSearchCommand}" CommandParameter="{Binding CurrentPath}" Style="{StaticResource ToolbarButton}" Padding="12,4" Background="{DynamicResource AppSelection}"/>
+                        <Button Content="Cancel" Command="{Binding Search.CancelSearchCommand}" Style="{StaticResource ToolbarButton}" Padding="12,4" Margin="4,0,0,0" Visibility="{Binding Search.IsSearching, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    </StackPanel>
+                </Grid>
+                
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <CheckBox Content="Recursive" IsChecked="{Binding Search.Recursive}" Foreground="{DynamicResource AppForeground}" Margin="0,0,20,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Size (MB) >" Foreground="{DynamicResource AppMuted}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding Search.AboveSize}" Width="50" Margin="0,0,20,0" VerticalAlignment="Center" Background="Transparent" Foreground="{DynamicResource AppForeground}" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource AppMuted}"/>
+                    <TextBlock Text="Created From" Foreground="{DynamicResource AppMuted}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                    <DatePicker SelectedDate="{Binding Search.CreatedFrom}" Width="110" VerticalAlignment="Center"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
         <!-- Two-column split grid -->
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="3">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="220" MinWidth="120"/>
             <ColumnDefinition Width="4"/>
