@@ -130,6 +130,9 @@
             <Separator Width="1" Margin="4,6" Background="{DynamicResource AppMuted}"/>
             <Button Content="↩ Undo" Command="{Binding Panel.UndoCommand}"
                     Style="{StaticResource ToolbarButton}" Padding="10,4" FontSize="12" ToolTip="Undo last action"/>
+            <Separator Width="1" Margin="4,6" Background="{DynamicResource AppMuted}"/>
+            <Button Content="🔍 Search" Command="{Binding Search.ToggleVisibilityCommand}"
+                    Style="{StaticResource ToolbarButton}" Padding="10,4" FontSize="12" ToolTip="Toggle Search Panel"/>
         </StackPanel>
 
         <!-- Two-column split grid -->

@@ -12,6 +12,7 @@ public partial class MainWindowViewModel : ObservableObject
 {
     public FileTreeViewModel Tree { get; }
     public FilePanelViewModel Panel { get; }
+    public SearchViewModel Search { get; }
 
     [ObservableProperty]
     private string _currentPath = string.Empty;
@@ -25,8 +26,11 @@ public partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel()
     {
         var metadataProvider = new NtfsMetadataProvider();
+        var searchService = new FileSystemP.Core.SearchService.SearchService();
+
         Tree = new FileTreeViewModel(NavigateTo);
         Panel = new FilePanelViewModel(NavigateTo, metadataProvider);
+        Search = new SearchViewModel(searchService, NavigateTo);
     }
 
     partial void OnCurrentPathChanged(string value)
