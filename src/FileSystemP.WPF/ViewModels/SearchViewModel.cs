@@ -14,6 +14,7 @@ namespace FileSystemP.WPF.ViewModels;
 public partial class SearchViewModel : ObservableObject
 {
     private readonly ISearchService _searchService;
+    private readonly FilePanelViewModel _panel;
     private readonly Action<string> _navigateTo;
     private CancellationTokenSource? _cts;
 
@@ -29,11 +30,11 @@ public partial class SearchViewModel : ObservableObject
 
     [ObservableProperty] private bool _isSearching;
     [ObservableProperty] private bool _isVisible;
-    [ObservableProperty] private ObservableCollection<FileEntry> _results = new();
 
-    public SearchViewModel(ISearchService searchService, Action<string> navigateTo)
+    public SearchViewModel(ISearchService searchService, FilePanelViewModel panel, Action<string> navigateTo)
     {
         _searchService = searchService;
+        _panel = panel;
         _navigateTo = navigateTo;
     }
 
@@ -43,7 +44,9 @@ public partial class SearchViewModel : ObservableObject
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
         IsSearching = true;
-        Results.Clear();
+        _panel.Entries.Clear();
+        _panel.IsEmpty = false;
+        _panel.ErrorMessage = "Searching...";
         StartSearchCommand.NotifyCanExecuteChanged();
 
         var options = new ExtendedOptions(
@@ -52,9 +55,9 @@ public partial class SearchViewModel : ObservableObject
             Pattern: string.IsNullOrWhiteSpace(Pattern) ? null : Pattern,
             Extensions: null,
             Attributes: null,
-            AboveSize: AboveSize,
+            AboveSize: AboveSize.HasValue ? AboveSize.Value * 1024 * 1024 : null, // Convert MB to Bytes
             ExactSize: null,
-            BelowSize: BelowSize,
+            BelowSize: BelowSize.HasValue ? BelowSize.Value * 1024 * 1024 : null, // Convert MB to Bytes
             CreatedFromDate: CreatedFrom,
             CreatedExactDate: null,
             CreatedToDate: CreatedTo,
@@ -69,12 +72,22 @@ public partial class SearchViewModel : ObservableObject
         try
         {
             var searchResult = await _searchService.SearchAsync(currentPath, options, _cts.Token);
+            _panel.ErrorMessage = null;
             foreach (var entry in searchResult.FoundEntries)
             {
-                Results.Add(MapToFileEntry(entry));
+                _panel.Entries.Add(MapToFileEntry(entry));
             }
+            _panel.IsEmpty = _panel.Entries.Count == 0;
+            if (_panel.IsEmpty) _panel.ErrorMessage = "No results found.";
         }
-        catch (OperationCanceledException) { /* Ignored */ }
+        catch (OperationCanceledException) 
+        {
+            _panel.ErrorMessage = "Search canceled.";
+        }
+        catch (Exception ex)
+        {
+            _panel.ErrorMessage = $"Search failed: {ex.Message}";
+        }
         finally
         {
             IsSearching = false;
