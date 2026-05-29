@@ -6,6 +6,7 @@ using FileSystemP.WPF.Models;
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,15 +22,37 @@ public partial class SearchViewModel : ObservableObject
     [ObservableProperty] private string _pattern = string.Empty;
     [ObservableProperty] private SearchTargetType _targetType = SearchTargetType.Both;
     [ObservableProperty] private bool _recursive = true;
-    
+    [ObservableProperty] private string _extensions = string.Empty;
+
+    [ObservableProperty] private bool _attributeReadOnly;
+    [ObservableProperty] private bool _attributeHidden;
+    [ObservableProperty] private bool _attributeArchive;
+    [ObservableProperty] private bool _attributeSystem;
+
     [ObservableProperty] private long? _aboveSize;
+    [ObservableProperty] private long? _exactSize;
     [ObservableProperty] private long? _belowSize;
-    
+
     [ObservableProperty] private DateTime? _createdFrom;
+    [ObservableProperty] private DateTime? _createdOn;
     [ObservableProperty] private DateTime? _createdTo;
+    [ObservableProperty] private DateTime? _modifiedFrom;
+    [ObservableProperty] private DateTime? _modifiedOn;
+    [ObservableProperty] private DateTime? _modifiedTo;
+    [ObservableProperty] private DateTime? _accessedFrom;
+    [ObservableProperty] private DateTime? _accessedOn;
+    [ObservableProperty] private DateTime? _accessedTo;
 
     [ObservableProperty] private bool _isSearching;
-    [ObservableProperty] private bool _isVisible;
+
+    public bool IsSizeRangeEnabled => !ExactSize.HasValue;
+    public bool IsSizeExactEnabled => !AboveSize.HasValue && !BelowSize.HasValue;
+    public bool IsCreatedRangeEnabled => !CreatedOn.HasValue;
+    public bool IsCreatedExactEnabled => !CreatedFrom.HasValue && !CreatedTo.HasValue;
+    public bool IsModifiedRangeEnabled => !ModifiedOn.HasValue;
+    public bool IsModifiedExactEnabled => !ModifiedFrom.HasValue && !ModifiedTo.HasValue;
+    public bool IsAccessedRangeEnabled => !AccessedOn.HasValue;
+    public bool IsAccessedExactEnabled => !AccessedFrom.HasValue && !AccessedTo.HasValue;
 
     public SearchViewModel(ISearchService searchService, FilePanelViewModel panel, Action<string> navigateTo)
     {
@@ -53,20 +76,20 @@ public partial class SearchViewModel : ObservableObject
             Option: Recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly,
             TargetType: TargetType,
             Pattern: string.IsNullOrWhiteSpace(Pattern) ? null : Pattern,
-            Extensions: null,
-            Attributes: null,
+            Extensions: ParseExtensions(),
+            Attributes: GetSelectedAttributes(),
             AboveSize: AboveSize.HasValue ? AboveSize.Value * 1024 * 1024 : null, // Convert MB to Bytes
-            ExactSize: null,
+            ExactSize: ExactSize.HasValue ? ExactSize.Value * 1024 * 1024 : null, // Convert MB to Bytes
             BelowSize: BelowSize.HasValue ? BelowSize.Value * 1024 * 1024 : null, // Convert MB to Bytes
             CreatedFromDate: CreatedFrom,
-            CreatedExactDate: null,
+            CreatedExactDate: CreatedOn,
             CreatedToDate: CreatedTo,
-            ModifiedFromDate: null,
-            ModifiedExactDate: null,
-            ModifiedToDate: null,
-            AccessedFromDate: null,
-            AccessedExactDate: null,
-            AccessedToDate: null
+            ModifiedFromDate: ModifiedFrom,
+            ModifiedExactDate: ModifiedOn,
+            ModifiedToDate: ModifiedTo,
+            AccessedFromDate: AccessedFrom,
+            AccessedExactDate: AccessedOn,
+            AccessedToDate: AccessedTo
         );
 
         try
@@ -101,7 +124,188 @@ public partial class SearchViewModel : ObservableObject
     private void CancelSearch() => _cts?.Cancel();
 
     [RelayCommand]
-    private void ToggleVisibility() => IsVisible = !IsVisible;
+    private void ClearFilters()
+    {
+        Pattern = string.Empty;
+        TargetType = SearchTargetType.Both;
+        Recursive = true;
+        Extensions = string.Empty;
+
+        AttributeReadOnly = false;
+        AttributeHidden = false;
+        AttributeArchive = false;
+        AttributeSystem = false;
+
+        AboveSize = null;
+        ExactSize = null;
+        BelowSize = null;
+
+        CreatedFrom = null;
+        CreatedOn = null;
+        CreatedTo = null;
+        ModifiedFrom = null;
+        ModifiedOn = null;
+        ModifiedTo = null;
+        AccessedFrom = null;
+        AccessedOn = null;
+        AccessedTo = null;
+    }
+
+    private List<string>? ParseExtensions()
+    {
+        var items = Extensions
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(ext => ext.Trim().TrimStart('.'))
+            .Where(ext => !string.IsNullOrWhiteSpace(ext))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return items.Count == 0 ? null : items;
+    }
+
+    private List<FileAttributes>? GetSelectedAttributes()
+    {
+        var attributes = new List<FileAttributes>();
+
+        if (AttributeReadOnly) attributes.Add(FileAttributes.ReadOnly);
+        if (AttributeHidden) attributes.Add(FileAttributes.Hidden);
+        if (AttributeArchive) attributes.Add(FileAttributes.Archive);
+        if (AttributeSystem) attributes.Add(FileAttributes.System);
+
+        return attributes.Count == 0 ? null : attributes;
+    }
+
+    partial void OnAboveSizeChanged(long? value)
+    {
+        if (value.HasValue && ExactSize.HasValue)
+            ExactSize = null;
+
+        NotifySizeStateChanged();
+    }
+
+    partial void OnExactSizeChanged(long? value)
+    {
+        if (value.HasValue)
+        {
+            if (AboveSize.HasValue) AboveSize = null;
+            if (BelowSize.HasValue) BelowSize = null;
+        }
+
+        NotifySizeStateChanged();
+    }
+
+    partial void OnBelowSizeChanged(long? value)
+    {
+        if (value.HasValue && ExactSize.HasValue)
+            ExactSize = null;
+
+        NotifySizeStateChanged();
+    }
+
+    partial void OnCreatedFromChanged(DateTime? value)
+    {
+        if (value.HasValue && CreatedOn.HasValue)
+            CreatedOn = null;
+
+        NotifyCreatedDateStateChanged();
+    }
+
+    partial void OnCreatedOnChanged(DateTime? value)
+    {
+        if (value.HasValue)
+        {
+            if (CreatedFrom.HasValue) CreatedFrom = null;
+            if (CreatedTo.HasValue) CreatedTo = null;
+        }
+
+        NotifyCreatedDateStateChanged();
+    }
+
+    partial void OnCreatedToChanged(DateTime? value)
+    {
+        if (value.HasValue && CreatedOn.HasValue)
+            CreatedOn = null;
+
+        NotifyCreatedDateStateChanged();
+    }
+
+    partial void OnModifiedFromChanged(DateTime? value)
+    {
+        if (value.HasValue && ModifiedOn.HasValue)
+            ModifiedOn = null;
+
+        NotifyModifiedDateStateChanged();
+    }
+
+    partial void OnModifiedOnChanged(DateTime? value)
+    {
+        if (value.HasValue)
+        {
+            if (ModifiedFrom.HasValue) ModifiedFrom = null;
+            if (ModifiedTo.HasValue) ModifiedTo = null;
+        }
+
+        NotifyModifiedDateStateChanged();
+    }
+
+    partial void OnModifiedToChanged(DateTime? value)
+    {
+        if (value.HasValue && ModifiedOn.HasValue)
+            ModifiedOn = null;
+
+        NotifyModifiedDateStateChanged();
+    }
+
+    partial void OnAccessedFromChanged(DateTime? value)
+    {
+        if (value.HasValue && AccessedOn.HasValue)
+            AccessedOn = null;
+
+        NotifyAccessedDateStateChanged();
+    }
+
+    partial void OnAccessedOnChanged(DateTime? value)
+    {
+        if (value.HasValue)
+        {
+            if (AccessedFrom.HasValue) AccessedFrom = null;
+            if (AccessedTo.HasValue) AccessedTo = null;
+        }
+
+        NotifyAccessedDateStateChanged();
+    }
+
+    partial void OnAccessedToChanged(DateTime? value)
+    {
+        if (value.HasValue && AccessedOn.HasValue)
+            AccessedOn = null;
+
+        NotifyAccessedDateStateChanged();
+    }
+
+    private void NotifyCreatedDateStateChanged()
+    {
+        OnPropertyChanged(nameof(IsCreatedRangeEnabled));
+        OnPropertyChanged(nameof(IsCreatedExactEnabled));
+    }
+
+    private void NotifySizeStateChanged()
+    {
+        OnPropertyChanged(nameof(IsSizeRangeEnabled));
+        OnPropertyChanged(nameof(IsSizeExactEnabled));
+    }
+
+    private void NotifyModifiedDateStateChanged()
+    {
+        OnPropertyChanged(nameof(IsModifiedRangeEnabled));
+        OnPropertyChanged(nameof(IsModifiedExactEnabled));
+    }
+
+    private void NotifyAccessedDateStateChanged()
+    {
+        OnPropertyChanged(nameof(IsAccessedRangeEnabled));
+        OnPropertyChanged(nameof(IsAccessedExactEnabled));
+    }
 
     private static FileEntry MapToFileEntry(FileSystemInfo info)
     {
@@ -113,7 +317,8 @@ public partial class SearchViewModel : ObservableObject
             IsDirectory = isDir,
             DateModified = info.LastWriteTime,
             Type = isDir ? "Folder" : GetFileType(info.Name),
-            Size = isDir ? "" : FormatSize(((FileInfo)info).Length)
+            Size = isDir ? "" : FormatSize(((FileInfo)info).Length),
+            Icon = Helpers.ShellIconHelper.GetIcon(info.FullName, isDirectory: isDir)
         };
     }
 

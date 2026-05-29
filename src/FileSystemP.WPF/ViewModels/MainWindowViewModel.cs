@@ -20,6 +20,9 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private IEnumerable<PathSegment> _pathSegments = Enumerable.Empty<PathSegment>();
 
+    [ObservableProperty]
+    private int _selectedSidebarSectionIndex;
+
     private readonly Stack<string> _backStack = new();
     private readonly Stack<string> _forwardStack = new();
 
@@ -117,5 +120,11 @@ public partial class MainWindowViewModel : ObservableObject
             return;
 
         Panel.ShowPropertiesForPath(node.FullPath, isDirectory: true);
+    }
+
+    [RelayCommand]
+    private void ShowSearchMenu()
+    {
+        SelectedSidebarSectionIndex = 1;
     }
 }
