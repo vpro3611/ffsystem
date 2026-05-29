@@ -71,10 +71,15 @@ public partial class MainWindowViewModel : ObservableObject
         PathSegments = segments;
     }
 
+    [RelayCommand]
     private void NavigateTo(string path)
     {
+        if (string.IsNullOrEmpty(path) || path == CurrentPath)
+            return;
+
         if (!string.IsNullOrEmpty(CurrentPath))
             _backStack.Push(CurrentPath);
+        
         _forwardStack.Clear();
         CurrentPath = path;
         NavigateBackCommand.NotifyCanExecuteChanged();
