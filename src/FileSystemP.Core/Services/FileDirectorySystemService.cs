@@ -100,16 +100,69 @@ public static class FileDirectorySystemService
             throw new AppException(e.Message, $"{_className}.{nameof(CreateFileWithContent)}()", e.Source, e);
         }
     }
-
-    public static void Copy(string source, string destination, bool overwrite = false)
+    public static void Copy(string source, string destination, bool overwrite = false, IProgress<double>? progress = null)
     {
         try
         {
-            File.Copy(source, destination, overwrite: overwrite);
+            if (Directory.Exists(source))
+            {
+                var sourceDir = new DirectoryInfo(source);
+                int totalFiles = CountFiles(sourceDir);
+                int copiedFiles = 0;
+                CopyDirectoryRecursive(source, destination, overwrite, progress, totalFiles, ref copiedFiles);
+            }
+            else
+            {
+                File.Copy(source, destination, overwrite: overwrite);
+                progress?.Report(1.0);
+            }
         }
         catch (Exception e)
         {
             throw new AppException(e.Message, $"{_className}.{nameof(Copy)}()", e.Source, e);
+        }
+    }
+
+    private static int CountFiles(DirectoryInfo dir)
+    {
+        int count = dir.GetFiles().Length;
+        foreach (var subDir in dir.GetDirectories())
+            count += CountFiles(subDir);
+        return count;
+    }
+
+    private static void CopyDirectoryRecursive(string source, string destination, bool overwrite, IProgress<double>? progress, int totalFiles, ref int copiedFiles)
+    {
+        var sourceDir = new DirectoryInfo(source);
+        if (!sourceDir.Exists)
+            throw new DirectoryNotFoundException($"Source directory not found: {source}");
+
+        // Infinite recursion check
+        var destFullPath = Path.GetFullPath(destination);
+        var sourceFullPath = Path.GetFullPath(source);
+        if (destFullPath.StartsWith(sourceFullPath, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new IOException($"Cannot copy a directory into itself (infinite recursion detected). Source: {source}, Destination: {destination}");
+        }
+
+        if (Directory.Exists(destination) && !overwrite)
+            throw new IOException($"The destination directory already exists: {destination}");
+
+        Directory.CreateDirectory(destination);
+
+        foreach (var file in sourceDir.GetFiles())
+        {
+            string targetPath = Path.Combine(destination, file.Name);
+            file.CopyTo(targetPath, overwrite);
+            copiedFiles++;
+            if (totalFiles > 0)
+                progress?.Report((double)copiedFiles / totalFiles);
+        }
+
+        foreach (var subDir in sourceDir.GetDirectories())
+        {
+            string targetPath = Path.Combine(destination, subDir.Name);
+            CopyDirectoryRecursive(subDir.FullName, targetPath, overwrite, progress, totalFiles, ref copiedFiles);
         }
     }
 
