@@ -227,6 +227,10 @@
         </StackPanel>
 
         <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="320" MinWidth="220"/>
                 <ColumnDefinition Width="4"/>
@@ -547,6 +551,16 @@
                     </TextBlock.Style>
                 </TextBlock>
             </Grid>
+
+            <StatusBar Grid.Row="1" Grid.ColumnSpan="3" Background="{DynamicResource AppSurface}" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource AppMuted}"
+                       Visibility="{Binding Panel.IsCopying, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StatusBarItem>
+                    <ProgressBar Width="200" Height="14" Minimum="0" Maximum="1" Value="{Binding Panel.CopyProgress}"/>
+                </StatusBarItem>
+                <StatusBarItem>
+                    <TextBlock Text="Copying files..." Foreground="{DynamicResource AppForeground}" FontSize="12" Margin="5,0,0,0"/>
+                </StatusBarItem>
+            </StatusBar>
         </Grid>
     </Grid>
 </Window>

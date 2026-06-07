@@ -36,6 +36,12 @@ public partial class FilePanelViewModel : ObservableObject
     [ObservableProperty]
     private string? _clipboardPath;
 
+    [ObservableProperty]
+    private bool _isCopying;
+
+    [ObservableProperty]
+    private double _copyProgress;
+
     partial void OnClipboardPathChanged(string? value)
     {
         PasteCommand.NotifyCanExecuteChanged();
@@ -186,16 +192,24 @@ public partial class FilePanelViewModel : ObservableObject
             MessageBox.Show("Navigate to a destination folder first.", "No folder selected", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        if (Directory.Exists(ClipboardPath))
+
+        var destination = Path.Combine(_currentPath, Path.GetFileName(ClipboardPath));
+
+        // Check if destination already exists (UI Policy)
+        if (File.Exists(destination) || Directory.Exists(destination))
         {
-            MessageBox.Show("Copying folders is not supported.", "Unsupported", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show($"The destination '{Path.GetFileName(ClipboardPath)}' already exists.", "Conflict", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        var destination = Path.Combine(_currentPath, Path.GetFileName(ClipboardPath));
         try
         {
-            FileDirectorySystemService.Copy(ClipboardPath, destination);
+            IsCopying = true;
+            CopyProgress = 0;
+            var progress = new Progress<double>(p => CopyProgress = p);
+
+            await Task.Run(() => FileDirectorySystemService.Copy(ClipboardPath, destination, overwrite: false, progress));
+            
             _undoStack.Push(new UndoPaste(destination));
             UndoCommand.NotifyCanExecuteChanged();
             await LoadEntries(_currentPath);
@@ -203,6 +217,10 @@ public partial class FilePanelViewModel : ObservableObject
         catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsCopying = false;
         }
     }
 
