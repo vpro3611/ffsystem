@@ -82,7 +82,7 @@ The core library is organized by behavior rather than by UI feature:
 - delete files and directories
 - create files and directories
 - create files with initial content
-- copy files
+- copy files and directories (recursive)
 - read file bytes
 
 `DriveService` returns ready drives and allows lookup by drive name.
@@ -167,7 +167,7 @@ Platform-dependent areas, especially compression and Windows ACL behavior, are g
 
 ## Known Boundaries
 
-- The current copy/paste workflow supports files, not folders.
-- Search is implemented as in-memory result accumulation, which is simple and clear but not optimized for very large result sets.
+- Search is implemented as in-memory result accumulation
+, which is simple and clear but not optimized for very large result sets.
 - Directory size calculation in `NtfsMetadataProvider` walks all descendant files recursively.
 - Security editing is tightly coupled to Windows ACL semantics.

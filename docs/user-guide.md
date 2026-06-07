@@ -59,7 +59,7 @@ The content panel supports context-menu operations on files and folders.
 
 - Double-clicking a folder navigates into it.
 - Double-clicking a file opens it through the Windows shell.
-- Copy and paste currently support files only. Folder copy is intentionally blocked in the current implementation.
+- Copy and paste support both files and folders. For folders, the copy is recursive and includes all subfolders and files.
 
 ## Search
 

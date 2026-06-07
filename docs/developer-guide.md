@@ -145,7 +145,6 @@ The current suite verifies:
 
 ## Known Limitations
 
-- Folder copy and paste are not implemented.
 - Search collects results into memory before the UI consumes them.
 - Security editing is Windows-specific and assumes Windows account resolution.
 - Compression behavior depends on Windows NTFS support and may not be available on all volumes.
