@@ -101,11 +101,11 @@ public static class FileDirectorySystemService
         }
     }
 
-    public static void Copy(string source, string destination)
+    public static void Copy(string source, string destination, bool overwrite = false)
     {
         try
         {
-            File.Copy(source, destination, overwrite: false);
+            File.Copy(source, destination, overwrite: overwrite);
         }
         catch (Exception e)
         {
@@ -122,6 +122,51 @@ public static class FileDirectorySystemService
         catch (Exception e)
         {
             throw new AppException(e.Message, $"{_className}.{nameof(ReadFileContent)}()", e.Source, e);
+        }
+    }
+
+    public static async Task<List<string>> ReadFileLineByLine(string path, int countOfLines)
+    {
+        try
+        {
+            if (countOfLines == 0)
+            {
+                return [];
+            }
+
+            using var reader = new StreamReader(path);
+
+            if (countOfLines > 0)
+            {
+                List<string> result = [];
+                string? line;
+                while (result.Count < countOfLines && (line = await reader.ReadLineAsync()) != null)
+                {
+                    result.Add(line);
+                }
+                return result;
+            }
+            else
+            {
+                int lastN = Math.Abs(countOfLines);
+                Queue<string> queue = new(lastN);
+                
+                string? line;
+
+                while ((line = await reader.ReadLineAsync()) != null)
+                {
+                    if (queue.Count == lastN)
+                    {
+                        queue.Dequeue();
+                    }
+                    queue.Enqueue(line);
+                }
+                return queue.ToList();
+            }
+        }
+        catch (Exception e)
+        {
+            throw new AppException(e.Message, $"{_className}.{nameof(ReadFileLineByLine)}()", e.Source, e);
         }
     }
 }
