@@ -2,5 +2,5 @@
 
 public interface IParser
 {
-     Task<CommandResult> ExecuteAllParsed(List<string> command);
+     Task<CommandResult> ExecuteAllParsed(List<string> command, string currentDirectory = "");
 }
