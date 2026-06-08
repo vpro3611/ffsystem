@@ -20,7 +20,8 @@ public class Parser : IParser
         ["help"] = AvailableCommands.Help,
         ["helpflags"] = AvailableCommands.HelpForFlags,
         ["explain"] = AvailableCommands.Explain,
-        ["explainall"] = AvailableCommands.ExplainAll
+        ["explainall"] = AvailableCommands.ExplainAll,
+        ["ls"] = AvailableCommands.Ls
     };
 
     private static readonly Dictionary<string, FlagsForCommands> FlagMap = new()
@@ -33,6 +34,14 @@ public class Parser : IParser
         ["--no-recursive"] = FlagsForCommands.NoRecursive,
         ["-no"] = FlagsForCommands.NoOverwrite,
         ["--no-overwrite"] = FlagsForCommands.NoOverwrite,
+        ["-s"] = FlagsForCommands.LsSize,
+        ["--size"] = FlagsForCommands.LsSize,
+        ["-mt"] = FlagsForCommands.LsModTime,
+        ["--mod-time"] = FlagsForCommands.LsModTime,
+        ["-at"] = FlagsForCommands.LsAccessedTime,
+        ["--accessed-time"] = FlagsForCommands.LsAccessedTime,
+        ["-ct"] = FlagsForCommands.LsCreatedTime,
+        ["--created-time"] = FlagsForCommands.LsCreatedTime,
     };
 
     private static readonly Dictionary<string, string> CommandAndFlagDescriptions = new()
@@ -50,6 +59,7 @@ public class Parser : IParser
         ["helpflags"] = "Displays help information for available flags. Usage: helpflags or helpflags <flag>. Flags: none. Example: helpflags --overwrite",
         ["explain"] = "Explains one or more commands or flags. Usage: explain <target> [additional-targets]. Flags: none. Example: explain cp --overwrite",
         ["explainall"] = "Explains all available commands and flags. Flags: none. Example: explainall",
+        ["ls"] = "Lists the contents of the current directory or specific passed directory. Flags: none. Example: ls",
         ["-o"] = "Overwrite flag. Used with: cp. Effect: allows the destination file to be replaced if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt -o",
         ["--overwrite"] = "Overwrite flag. Used with: cp. Effect: allows the destination file to be replaced if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt --overwrite",
         ["-r"] = "Recursive flag. Used with: del. Effect: allows deleting a directory together with all nested files and subdirectories. Example: del C:\\Temp\\Logs -r",
@@ -58,6 +68,14 @@ public class Parser : IParser
         ["--no-recursive"] = "No-recursive flag. Used with: del. Effect: deletes a directory only if it is empty; otherwise the operation fails. Example: del C:\\Temp\\Logs --no-recursive",
         ["-no"] = "No-overwrite flag. Used with: cp. Effect: prevents replacing the destination file if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt -no",
         ["--no-overwrite"] = "No-overwrite flag. Used with: cp. Effect: prevents replacing the destination file if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt --no-overwrite",
+        ["-s"] = "Size flag. Used with: ls. Effect: list files in directory sorted by size in ascending order (directories are evaluated as 0 for speed purposes). Example: ls -s",
+        ["--size"] = "Size flag. Used with: ls. Effect: list files in directory sorted by size in ascending order (directories are evaluated as 0 for speed purposes). Example: ls --size",
+        ["-mt"] = "Modified time flag. Used with: ls. Effect: list files in directory sorted by modified time in ascending order. Example: ls -mt",
+        ["--mod-time"] = "Modified time flag. Used with: ls. Effect: list files in directory sorted by modified time in ascending order. Example: ls --mod-time",
+        ["-at"] = "Accessed time flag. Used with: ls. Effect: list files in directory sorted by accessed time in ascending order. Example: ls -at",
+        ["--accessed-time"] = "Accessed time flag. Used with: ls. Effect: list files in directory sorted by accessed time in ascending order. Example: ls --accessed-time",
+        ["-ct"] = "Created time flag. Used with: ls. Effect: list files in directory sorted by created time in ascending order. Example: ls -ct",
+        ["--created-time"] = "Created time flag. Used with: ls. Effect: list files in directory sorted by created time in ascending order. Example: ls --created-time",
     };
 
 
@@ -119,6 +137,8 @@ public class Parser : IParser
                 return noCommandArray.Count > 0;
             case AvailableCommands.ExplainAll:
                 return noCommandArray.Count == 0;
+            case AvailableCommands.Ls:
+                    return noCommandArray.Count >= 1 && noCommandArray.Count <= 2; // [ls] dir --flag
             default:
                 return false;
         }
@@ -345,13 +365,119 @@ public class Parser : IParser
         }
         return CommandResult.Ok(explanation, "Explanation of all available commands and flags.");
     }
+
+
+    private Dictionary<string, FileSystemInfo> MapperHelper(List<FileSystemInfo> entries)
+    {
+        int n = 1;
+        Dictionary<string, FileSystemInfo> result = new();
+        
+        foreach (var entry in entries)
+        {
+            result.Add(n.ToString(), entry);
+            n++;
+        }
+
+        return result;
+    }
+
+    private DirectoryInfo ValidateDirectoryInfo(string path)
+{
+    var dirInfo = new DirectoryInfo(path);
+
+    if (!dirInfo.Exists)
+    {
+        throw new DirectoryNotFoundException(
+            $"Directory not found: {path}");
+    }
+
+    return dirInfo;
+}
+
+private CommandResult ExecuteLsCore(
+    string path,
+    Func<FileSystemInfo, object>? orderBy = null,
+    string? description = null)
+{
+    var dirInfo = ValidateDirectoryInfo(path);
+
+    IEnumerable<FileSystemInfo> entries =
+        FileDirectorySystemService.GetEntries(dirInfo.FullName);
+
+    if (orderBy is not null)
+    {
+        entries = entries.OrderBy(orderBy);
+    }
+
+    Dictionary<string, FileSystemInfo> result =
+        MapperHelper(entries.ToList());
+    
+    return CommandResult.Ok(
+        result,
+        description ?? $"List of files in directory `{path}`.");
+}
+
+private CommandResult ExecuteLs(
+    AvailableCommands typedCommand,
+    string nameOfCommand,
+    List<string> command,
+    string currentDirectory)
+{
+    if (!CheckMinLengthForEachCommand(typedCommand, command))
+    {
+        throw new AppException(
+            $"Command {nameOfCommand} requires at least 2 arguments (3 in case of ls with a specific flag)!",
+            $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
+    }
+
+    string path =
+        command[1] == "." ? currentDirectory : command[1];
+
+    FlagsForCommands flag =
+        command.Count == 3
+            ? ParseFlags(command[2], nameOfCommand)
+            : FlagsForCommands.LsNone;
+
+    return flag switch
+    {
+        FlagsForCommands.LsSize =>
+            ExecuteLsCore(
+                path,
+                e => e is FileInfo file ? file.Length : 0L,
+                $"List of files in directory `{path}` sorted by size in ascending order."),
+
+        FlagsForCommands.LsModTime =>
+            ExecuteLsCore(
+                path,
+                e => e.LastWriteTime,
+                $"List of files in directory `{path}` sorted by last modified time in ascending order."),
+
+        FlagsForCommands.LsAccessedTime =>
+            ExecuteLsCore(
+                path,
+                e => e.LastAccessTime,
+                $"List of files in directory `{path}` sorted by last access time in ascending order."),
+
+        FlagsForCommands.LsCreatedTime =>
+            ExecuteLsCore(
+                path,
+                e => e.CreationTime,
+                $"List of files in directory `{path}` sorted by creation time in ascending order."),
+
+        FlagsForCommands.LsNone =>
+            ExecuteLsCore(path),
+
+        _ => CommandResult.NoOp(
+            "Invalid flag provided. Type 'help' to see all available flags and 'explain <flag>' to see the description of the flag.")
+    };
+}
     
     private CommandResult ExecuteDefault(string nameOfCommand)
     {
         return CommandResult.NoOp(message: $"Command `{nameOfCommand}` not found. Type 'help' to see all available commands.");
     }
     
-    public async Task<CommandResult> ExecuteAllParsed(List<string> command)
+    public async Task<CommandResult> ExecuteAllParsed(List<string> command, string currentDirectory = "")
     {
         if (!ValidateCommand(command)) return CommandResult.NoOp("No command provided.");
         AvailableCommands typedCommand = IndentifyCommand(command[0]);
@@ -372,6 +498,7 @@ public class Parser : IParser
             AvailableCommands.HelpForFlags => ExecuteHelpForFlags(typedCommand, nameOfCommand, command),
             AvailableCommands.Explain => ExecuteExplain(typedCommand, nameOfCommand, command),
             AvailableCommands.ExplainAll => ExecuteExplainAll(typedCommand, nameOfCommand, command),
+            AvailableCommands.Ls => ExecuteLs(typedCommand, nameOfCommand, command, currentDirectory),
             _ => ExecuteDefault(nameOfCommand)
         };
     }
