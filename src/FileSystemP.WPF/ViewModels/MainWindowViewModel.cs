@@ -13,6 +13,7 @@ public partial class MainWindowViewModel : ObservableObject
     public FileTreeViewModel Tree { get; }
     public FilePanelViewModel Panel { get; }
     public SearchViewModel Search { get; }
+    public CommandPaletteViewModel Palette { get; }
 
     [ObservableProperty]
     private string _currentPath = string.Empty;
@@ -34,12 +35,19 @@ public partial class MainWindowViewModel : ObservableObject
         Tree = new FileTreeViewModel(NavigateTo);
         Panel = new FilePanelViewModel(NavigateTo, metadataProvider);
         Search = new SearchViewModel(searchService, Panel, NavigateTo);
+        Palette = new CommandPaletteViewModel(NavigateTo);
     }
 
     partial void OnCurrentPathChanged(string value)
     {
+        if (Directory.Exists(value))
+        {
+            Directory.SetCurrentDirectory(value);
+        }
+        
         _ = Panel.LoadEntries(value);
         UpdatePathSegments(value);
+        Palette?.UpdatePrompt(value);
     }
 
     private void UpdatePathSegments(string path)
