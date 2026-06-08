@@ -104,16 +104,24 @@ public static class FileDirectorySystemService
     {
         try
         {
+            string finalDestination = destination;
+            if (Directory.Exists(destination))
+            {
+                // If destination is a directory, copy source INTO it
+                string fileName = Path.GetFileName(source);
+                finalDestination = Path.Combine(destination, fileName);
+            }
+
             if (Directory.Exists(source))
             {
                 var sourceDir = new DirectoryInfo(source);
                 int totalFiles = CountFiles(sourceDir);
                 int copiedFiles = 0;
-                CopyDirectoryRecursive(source, destination, overwrite, progress, totalFiles, ref copiedFiles);
+                CopyDirectoryRecursive(source, finalDestination, overwrite, progress, totalFiles, ref copiedFiles);
             }
             else
             {
-                File.Copy(source, destination, overwrite: overwrite);
+                File.Copy(source, finalDestination, overwrite: overwrite);
                 progress?.Report(1.0);
             }
         }
