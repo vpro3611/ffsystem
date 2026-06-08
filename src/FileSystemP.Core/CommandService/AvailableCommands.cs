@@ -13,7 +13,8 @@ public enum AvailableCommands
     Exit,
     Help,
     HelpForFlags,
-    Explain
+    Explain,
+    ExplainAll
 }
 
 public enum FlagsForCommands
