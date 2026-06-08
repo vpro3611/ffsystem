@@ -16,6 +16,7 @@ public partial class CommandPaletteViewModel : ObservableObject
 {
     private readonly Parser _parser = Parser.CreateParser();
     private readonly Action<string> _onNavigate;
+    private string _currentDirectory = string.Empty;
 
     [ObservableProperty]
     private string _input = string.Empty;
@@ -51,6 +52,7 @@ public partial class CommandPaletteViewModel : ObservableObject
         string pc = Environment.MachineName;
         string user = Environment.UserName;
         string dir = path ?? Directory.GetCurrentDirectory();
+        _currentDirectory = dir;
         Prompt = $"[{pc}]\\{user} @ {dir} >";
     }
 
@@ -90,7 +92,7 @@ public partial class CommandPaletteViewModel : ObservableObject
         {
             try 
             {
-                var result = await _parser.ExecuteAllParsed(parts);
+                var result = await _parser.ExecuteAllParsed(parts, _currentDirectory);
                 HandleResult(result, parts);
             }
             catch (Exception ex)
@@ -155,6 +157,14 @@ public partial class CommandPaletteViewModel : ObservableObject
                 foreach (var kvp in dict)
                 {
                     OutputHistory.Add(new TerminalLine($"{kvp.Key}: {kvp.Value}", Brushes.White));
+                }
+            }
+            else if (result.Payload is Dictionary<string, FileSystemInfo> lsResult)
+            {
+                foreach (var kvp in lsResult)
+                {
+                    string size = kvp.Value is FileInfo file ? $" ({file.Length} bytes)" : "";
+                    OutputHistory.Add(new TerminalLine($"[{kvp.Key}] {kvp.Value.Name} - {kvp.Value.FullName}{size}", Brushes.White));
                 }
             }
 
