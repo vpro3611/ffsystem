@@ -14,7 +14,8 @@ public enum AvailableCommands
     Help,
     HelpForFlags,
     Explain,
-    ExplainAll
+    ExplainAll,
+    Ls
 }
 
 public enum FlagsForCommands
@@ -23,4 +24,9 @@ public enum FlagsForCommands
     Recursive,
     NoOverwrite,
     Overwrite,
+    LsSize,
+    LsModTime,
+    LsAccessedTime,
+    LsCreatedTime,
+    LsNone
 }
