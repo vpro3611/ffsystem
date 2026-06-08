@@ -19,7 +19,8 @@ public class Parser : IParser
         ["exit"] = AvailableCommands.Exit,
         ["help"] = AvailableCommands.Help,
         ["helpflags"] = AvailableCommands.HelpForFlags,
-        ["explain"] = AvailableCommands.Explain
+        ["explain"] = AvailableCommands.Explain,
+        ["explainall"] = AvailableCommands.ExplainAll
     };
 
     private static readonly Dictionary<string, FlagsForCommands> FlagMap = new()
@@ -48,6 +49,7 @@ public class Parser : IParser
         ["help"] = "Displays help information for available commands and flags. Or your can request help for specific command or flag: help <target>. Flags: none. Example: help",
         ["helpflags"] = "Displays help information for available flags. Usage: helpflags or helpflags <flag>. Flags: none. Example: helpflags --overwrite",
         ["explain"] = "Explains one or more commands or flags. Usage: explain <target> [additional-targets]. Flags: none. Example: explain cp --overwrite",
+        ["explainall"] = "Explains all available commands and flags. Flags: none. Example: explainall",
         ["-o"] = "Overwrite flag. Used with: cp. Effect: allows the destination file to be replaced if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt -o",
         ["--overwrite"] = "Overwrite flag. Used with: cp. Effect: allows the destination file to be replaced if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt --overwrite",
         ["-r"] = "Recursive flag. Used with: del. Effect: allows deleting a directory together with all nested files and subdirectories. Example: del C:\\Temp\\Logs -r",
@@ -115,6 +117,8 @@ public class Parser : IParser
                 return noCommandArray.Count == 0;
             case AvailableCommands.Explain: 
                 return noCommandArray.Count > 0;
+            case AvailableCommands.ExplainAll:
+                return noCommandArray.Count == 0;
             default:
                 return false;
         }
@@ -326,6 +330,21 @@ public class Parser : IParser
         
         return CommandResult.Ok(explanation, "Explanation of the commands and flags provided.");
     }
+
+    private CommandResult ExecuteExplainAll(AvailableCommands typedCommand, string nameOfCommand, List<string> command)
+    {
+        if (!CheckMinLengthForEachCommand(typedCommand, command))
+        {
+            throw new AppException($"Command {nameOfCommand} requires no arguments!",
+                $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
+        }
+        Dictionary<string, string> explanation = new();
+        foreach (KeyValuePair<string, string> element in CommandAndFlagDescriptions)
+        {
+            explanation.Add(element.Key, element.Value);
+        }
+        return CommandResult.Ok(explanation, "Explanation of all available commands and flags.");
+    }
     
     private CommandResult ExecuteDefault(string nameOfCommand)
     {
@@ -352,6 +371,7 @@ public class Parser : IParser
             AvailableCommands.Help => ExecuteHelp(typedCommand, nameOfCommand, command),
             AvailableCommands.HelpForFlags => ExecuteHelpForFlags(typedCommand, nameOfCommand, command),
             AvailableCommands.Explain => ExecuteExplain(typedCommand, nameOfCommand, command),
+            AvailableCommands.ExplainAll => ExecuteExplainAll(typedCommand, nameOfCommand, command),
             _ => ExecuteDefault(nameOfCommand)
         };
     }
