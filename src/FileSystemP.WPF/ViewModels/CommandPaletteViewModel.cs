@@ -1,0 +1,201 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using FileSystemP.Core.CommandService;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Media;
+
+namespace FileSystemP.WPF.ViewModels;
+
+public partial class CommandPaletteViewModel : ObservableObject
+{
+    private readonly Parser _parser = Parser.CreateParser();
+    private readonly Action<string> _onNavigate;
+
+    [ObservableProperty]
+    private string _input = string.Empty;
+
+    [ObservableProperty]
+    private string _prompt = string.Empty;
+
+    [ObservableProperty]
+    private bool _isVisible = false;
+
+    [RelayCommand]
+    private void ToggleVisibility()
+    {
+        IsVisible = !IsVisible;
+        if (!IsVisible)
+        {
+            OutputHistory.Clear();
+        }
+    }
+
+    public ObservableCollection<TerminalLine> OutputHistory { get; } = new();
+    public List<string> CommandHistory { get; } = new();
+    private int _historyIndex = -1;
+
+    public CommandPaletteViewModel(Action<string> onNavigate)
+    {
+        _onNavigate = onNavigate;
+        UpdatePrompt();
+    }
+
+    public void UpdatePrompt(string? path = null)
+    {
+        string pc = Environment.MachineName;
+        string user = Environment.UserName;
+        string dir = path ?? Directory.GetCurrentDirectory();
+        Prompt = $"[{pc}]\\{user} @ {dir} >";
+    }
+
+    [RelayCommand]
+    public async Task ExecuteCommand()
+    {
+        if (string.IsNullOrWhiteSpace(Input)) return;
+
+        string cmdText = Input.Trim();
+        CommandHistory.Add(cmdText);
+        _historyIndex = CommandHistory.Count;
+        
+        OutputHistory.Add(new TerminalLine($"{Prompt} {cmdText}", Brushes.Green));
+
+        if (cmdText.ToLower() == "clear")
+        {
+            OutputHistory.Clear();
+            Input = string.Empty;
+            return;
+        }
+
+        if (cmdText.ToLower() == "undo")
+        {
+            OutputHistory.Add(new TerminalLine("Undo is not yet implemented in the terminal.", Brushes.Yellow));
+            Input = string.Empty;
+            return;
+        }
+
+        var parts = cmdText.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+        
+        // Handle 'cp' specifically to support progress bar
+        if (parts[0].ToLower() == "cp")
+        {
+            await ExecuteCopyCommand(parts);
+        }
+        else
+        {
+            try 
+            {
+                var result = await _parser.ExecuteAllParsed(parts);
+                HandleResult(result, parts);
+            }
+            catch (Exception ex)
+            {
+                OutputHistory.Add(new TerminalLine($"Error: {ex.Message}", Brushes.Red));
+            }
+        }
+
+        Input = string.Empty;
+    }
+
+    private async Task ExecuteCopyCommand(List<string> parts)
+    {
+        try
+        {
+            // Simple parsing for cp: cp <source> <destination> <flag>
+            if (parts.Count < 4)
+            {
+                OutputHistory.Add(new TerminalLine("Error: cp requires source, destination, and flag.", Brushes.Red));
+                return;
+            }
+
+            string source = parts[1];
+            string destination = parts[2];
+            bool overwrite = parts[3].Contains("-o") || parts[3].Contains("--overwrite");
+
+            var progressLine = new TerminalLine("Copying... 0%", Brushes.Cyan);
+            OutputHistory.Add(progressLine);
+            int lastIndex = OutputHistory.Count - 1;
+
+            var progress = new Progress<double>(p =>
+            {
+                OutputHistory[lastIndex] = new TerminalLine($"Copying... {(int)(p * 100)}%", Brushes.Cyan);
+            });
+
+            await Task.Run(() => FileSystemP.Core.Services.FileDirectorySystemService.Copy(source, destination, overwrite, progress));
+            
+            OutputHistory[lastIndex] = new TerminalLine("Copy complete.", Brushes.White);
+        }
+        catch (Exception ex)
+        {
+            OutputHistory.Add(new TerminalLine($"Copy Error: {ex.Message}", Brushes.Red));
+        }
+    }
+
+    private void HandleResult(CommandResult result, List<string> parts)
+    {
+        if (result.Success)
+        {
+            if (result.Message != null)
+                OutputHistory.Add(new TerminalLine(result.Message, Brushes.White));
+            
+            if (result.Payload is IEnumerable<string> list)
+            {
+                foreach (var item in list)
+                {
+                    OutputHistory.Add(new TerminalLine($"  {item}", Brushes.White));
+                }
+            }
+            else if (result.Payload is Dictionary<string, string> dict)
+            {
+                foreach (var kvp in dict)
+                {
+                    OutputHistory.Add(new TerminalLine($"{kvp.Key}: {kvp.Value}", Brushes.White));
+                }
+            }
+
+            if (result.ShouldExit)
+            {
+                Application.Current.Shutdown();
+            }
+
+            // Handle navigation
+            if (parts[0].ToLower() == "cd" && result.Payload is CdResult cdResult)
+            {
+                _onNavigate?.Invoke(cdResult.FullPath);
+            }
+        }
+    }
+
+    [RelayCommand]
+    public void NavigateHistory(string direction)
+    {
+        if (CommandHistory.Count == 0) return;
+
+        if (direction == "Up")
+        {
+            if (_historyIndex > 0)
+                _historyIndex--;
+        }
+        else if (direction == "Down")
+        {
+            if (_historyIndex < CommandHistory.Count - 1)
+                _historyIndex++;
+            else if (_historyIndex == CommandHistory.Count - 1)
+            {
+                _historyIndex = CommandHistory.Count;
+                Input = string.Empty;
+                return;
+            }
+        }
+
+        if (_historyIndex >= 0 && _historyIndex < CommandHistory.Count)
+        {
+            Input = CommandHistory[_historyIndex];
+        }
+    }
+}
