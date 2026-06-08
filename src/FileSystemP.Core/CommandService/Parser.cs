@@ -139,8 +139,15 @@ public class Parser : IParser
         }
 
         string pathNavigateTo = command[1];
-        var entries = FileDirectorySystemService.GetEntries(pathNavigateTo).ToList();
-        return CommandResult.Ok(entries, $"Validated path `{pathNavigateTo}`.");
+        var dirInfo = new DirectoryInfo(pathNavigateTo);
+        if (!dirInfo.Exists)
+        {
+            throw new DirectoryNotFoundException($"Directory not found: {pathNavigateTo}");
+        }
+
+        var entries = FileDirectorySystemService.GetEntries(dirInfo.FullName).ToList();
+        // Return both the entries and the absolute path
+        return CommandResult.Ok(new CdResult(entries, dirInfo.FullName), $"Validated path `{dirInfo.FullName}`.");
     }
     
     private CommandResult ExecuteRename(AvailableCommands typedCommand, string nameOfCommand, List<string> command)
