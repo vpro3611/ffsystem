@@ -65,7 +65,9 @@ public sealed class ParserTests : IDisposable
 
         var result = await _parser.ExecuteAllParsed(["cd", _tempDir]);
 
-        var entries = Assert.IsAssignableFrom<IEnumerable<FileSystemInfo>>(result.Payload);
+        var cdResult = Assert.IsType<CdResult>(result.Payload);
+        var entries = cdResult.Entries;
+        
         Assert.Equal("Validated path `" + _tempDir + "`.", result.Message);
         Assert.Contains(entries, entry => entry.Name == "file.txt");
         Assert.Contains(entries, entry => entry.Name == "subdir");
@@ -386,7 +388,9 @@ public sealed class ParserTests : IDisposable
         var cdResult = await _parser.ExecuteAllParsed(["cd", directory]);
         await _parser.ExecuteAllParsed(["del", directory, "-r"]);
 
-        var entries = Assert.IsAssignableFrom<IEnumerable<FileSystemInfo>>(cdResult.Payload);
+        var data = Assert.IsType<CdResult>(cdResult.Payload);
+        var entries = data.Entries;
+        
         Assert.Contains(entries, entry => entry.Name == "note.txt");
         Assert.False(Directory.Exists(directory));
     }
