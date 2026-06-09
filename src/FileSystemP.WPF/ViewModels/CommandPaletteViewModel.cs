@@ -5,6 +5,7 @@ using FileSystemP.Core.Services;
 using FileSystemP.WPF.Views;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Media;
 
@@ -167,6 +168,19 @@ public partial class CommandPaletteViewModel : ObservableObject
                     string size = kvp.Value is FileInfo file ? $" ({file.Length} bytes)" : "";
                     OutputHistory.Add(new TerminalLine($"[{kvp.Key}] {kvp.Value.Name} - {kvp.Value.FullName}{size}", Brushes.White));
                 }
+            }
+            else if (result.Payload is FileLinesResult fileLinesResult)
+            {
+                foreach (var line in fileLinesResult.Lines)
+                {
+                    OutputHistory.Add(new TerminalLine(line, Brushes.White));
+                }
+            }
+            else if (result.Payload is FileContentResult fileContentResult)
+            {
+                string content = Encoding.UTF8.GetString(fileContentResult.Content);
+                
+                OutputHistory.Add(new TerminalLine(content, Brushes.White));
             }
 
             if (result.ShouldExit)
