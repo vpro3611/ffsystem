@@ -35,7 +35,7 @@ public partial class MainWindowViewModel : ObservableObject
         Tree = new FileTreeViewModel(NavigateTo);
         Panel = new FilePanelViewModel(NavigateTo, metadataProvider);
         Search = new SearchViewModel(searchService, Panel, NavigateTo);
-        Palette = new CommandPaletteViewModel(NavigateTo);
+        Palette = new CommandPaletteViewModel(NavigateTo, this);
     }
 
     partial void OnCurrentPathChanged(string value)

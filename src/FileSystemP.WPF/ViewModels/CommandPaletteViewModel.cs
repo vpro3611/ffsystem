@@ -13,6 +13,7 @@ public partial class CommandPaletteViewModel : ObservableObject
 {
     private readonly Parser _parser = Parser.CreateParser();
     private readonly Action<string> _onNavigate;
+    private readonly MainWindowViewModel _mainWindow;
     private string _currentDirectory = string.Empty;
 
     [ObservableProperty]
@@ -38,9 +39,10 @@ public partial class CommandPaletteViewModel : ObservableObject
     public List<string> CommandHistory { get; } = new();
     private int _historyIndex = -1;
 
-    public CommandPaletteViewModel(Action<string> onNavigate)
+    public CommandPaletteViewModel(Action<string> onNavigate, MainWindowViewModel mainWindow)
     {
         _onNavigate = onNavigate;
+        _mainWindow = mainWindow;
         UpdatePrompt();
     }
 
@@ -178,6 +180,46 @@ public partial class CommandPaletteViewModel : ObservableObject
             if (result.ShouldOpenProperties && result.Payload != null)
             {
                 PropertiesWindow.ShowFor(result.Payload, Application.Current.MainWindow);
+            }
+
+            if (result.ShouldGoBack)
+            {
+                if (_mainWindow.NavigateBackCommand.CanExecute(null))
+                    _mainWindow.NavigateBackCommand.Execute(null);
+                else
+                    OutputHistory.Add(new TerminalLine("Cannot go back: history is empty.", Brushes.Yellow));
+            }
+
+            if (result.ShouldGoForward)
+            {
+                if (_mainWindow.NavigateForwardCommand.CanExecute(null))
+                    _mainWindow.NavigateForwardCommand.Execute(null);
+                else
+                    OutputHistory.Add(new TerminalLine("Cannot go forward: history is empty.", Brushes.Yellow));
+            }
+
+            if (result.GoHomePath != null)
+            {
+                _onNavigate?.Invoke(result.GoHomePath);
+            }
+
+            if (result.ShouldUndo)
+            {
+                if (_mainWindow.Panel.UndoCommand.CanExecute(null))
+                    _mainWindow.Panel.UndoCommand.Execute(null);
+                else
+                    OutputHistory.Add(new TerminalLine("Nothing to undo.", Brushes.Yellow));
+            }
+
+            if (result.ShouldOpenSearch)
+            {
+                _mainWindow.SelectedSidebarSectionIndex = 1;
+            }
+
+            if (result.ShouldToggleHidden)
+            {
+                _mainWindow.Panel.ShowHiddenFiles = !_mainWindow.Panel.ShowHiddenFiles;
+                OutputHistory.Add(new TerminalLine($"Show Hidden Files: {_mainWindow.Panel.ShowHiddenFiles}", Brushes.White));
             }
 
             // Handle navigation
