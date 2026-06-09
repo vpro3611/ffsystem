@@ -2,12 +2,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FileSystemP.Core.CommandService;
 using FileSystemP.WPF.Views;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 
@@ -103,7 +99,12 @@ public partial class CommandPaletteViewModel : ObservableObject
         }
 
         Input = string.Empty;
-    }
+    }   
+    
+    // TODO:
+    // This command currently performs its own flag parsing.
+    // Future refactor: use Parser.ParseFlags() result instead
+    // so command validation remains consistent with the backend parser.
 
     private async Task ExecuteCopyCommand(List<string> parts)
     {
