@@ -2,6 +2,7 @@ using System.Collections;
 using System.Text;
 using FileSystemP.Core;
 using FileSystemP.Core.CommandService;
+using FileSystemP.Core.Services;
 
 namespace FileSystemP.Tests;
 
@@ -14,7 +15,7 @@ public sealed class ParserTests : IDisposable
     {
         _tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(_tempDir);
-        _parser = Parser.CreateParser();
+        _parser = Parser.CreateParser(new UndoService());
     }
 
     public void Dispose()
@@ -30,7 +31,7 @@ public sealed class ParserTests : IDisposable
     [Fact]
     public void CreateParser_ReturnsParserInstance()
     {
-        var parser = Parser.CreateParser();
+        var parser = Parser.CreateParser(new UndoService());
 
         Assert.NotNull(parser);
         Assert.IsType<Parser>(parser);

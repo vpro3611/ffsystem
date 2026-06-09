@@ -1,4 +1,5 @@
 using FileSystemP.WPF.ViewModels;
+using FileSystemP.Core.Services;
 using Xunit;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -14,7 +15,7 @@ public class CommandPaletteViewModelTests
     public async Task ExecuteCommand_Help_AddsToHistory()
     {
         var mainVm = new MainWindowViewModel();
-        var vm = new CommandPaletteViewModel(p => {}, mainVm);
+        var vm = new CommandPaletteViewModel(p => {}, mainVm, new UndoService());
         vm.Input = "help";
         await vm.ExecuteCommand();
         Assert.NotEmpty(vm.OutputHistory);
@@ -34,7 +35,7 @@ public class CommandPaletteViewModelTests
             long fileSize = new FileInfo(filePath).Length;
 
             var mainVm = new MainWindowViewModel();
-            var vm = new CommandPaletteViewModel(p => {}, mainVm);
+            var vm = new CommandPaletteViewModel(p => {}, mainVm, new UndoService());
             vm.UpdatePrompt(testDir);
             vm.Input = $"ls {testDir}";
 
