@@ -175,9 +175,11 @@ public partial class FilePanelViewModel : ObservableObject
         if (MessageBox.Show($"Delete '{SelectedEntry.Name}'?", "Confirm", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
             return;
 
+        string path = SelectedEntry.FilePath;
         try
         {
-            FileDirectorySystemService.Delete(SelectedEntry.FilePath);
+            FileDirectorySystemService.Delete(path);
+            _undoService.Push(new UndoDeleteAction(path));
             await LoadEntries(_currentPath);
         }
         catch (Exception ex)

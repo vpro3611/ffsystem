@@ -56,3 +56,35 @@ public record UndoCreateAction(string Path) : IUndoAction
         FileDirectorySystemService.Delete(Path);
     }
 }
+
+public record UndoDeleteAction(string OriginalPath) : IUndoAction
+{
+    public void Execute()
+    {
+        // Use Shell32 to restore from Recycle Bin
+        // ssfBITBUCKET = 10
+        Type? shellType = Type.GetTypeFromProgID("Shell.Application");
+        if (shellType == null) return;
+        
+        dynamic? shell = Activator.CreateInstance(shellType);
+        if (shell == null) return;
+
+        dynamic recycleBin = shell.NameSpace(10);
+        foreach (dynamic item in recycleBin.Items())
+        {
+            // Column 1 is usually the "Original Location"
+            string itemOriginalPath = recycleBin.GetDetailsOf(item, 1);
+            string itemName = recycleBin.GetDetailsOf(item, 0);
+            
+            // Reconstruct full path if necessary, or just check OriginalPath
+            // GetDetailsOf(item, 1) returns the parent folder path
+            string fullItemPath = Path.Combine(itemOriginalPath, itemName);
+
+            if (string.Equals(fullItemPath, OriginalPath, StringComparison.OrdinalIgnoreCase))
+            {
+                item.InvokeVerb("restore");
+                break;
+            }
+        }
+    }
+}

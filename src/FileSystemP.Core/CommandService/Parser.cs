@@ -312,7 +312,10 @@ public class Parser : IParser
         string pathForDel = ResolvePath(command[1], currentDirectory);
         FlagsForCommands flag = ParseFlags(command[2], nameOfCommand, typedCommand);
         bool recursive = flag == FlagsForCommands.Recursive;
+        
         FileDirectorySystemService.Delete(pathForDel, recursive);
+        _undoService?.Push(new UndoDeleteAction(pathForDel));
+
         return CommandResult.Ok(message: $"Deleted `{pathForDel}`.");
     }
 
