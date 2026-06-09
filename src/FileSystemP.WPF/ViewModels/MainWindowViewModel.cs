@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FileSystemP.Core.MetadataService.Providers.Ntfs;
+using FileSystemP.Core.Services;
 using FileSystemP.WPF.Models;
 using System.Collections.Generic;
 using System.IO;
@@ -29,13 +30,14 @@ public partial class MainWindowViewModel : ObservableObject
 
     public MainWindowViewModel()
     {
+        var undoService = new UndoService();
         var metadataProvider = new NtfsMetadataProvider();
         var searchService = new FileSystemP.Core.SearchService.SearchService();
 
         Tree = new FileTreeViewModel(NavigateTo);
-        Panel = new FilePanelViewModel(NavigateTo, metadataProvider);
+        Panel = new FilePanelViewModel(NavigateTo, metadataProvider, undoService);
         Search = new SearchViewModel(searchService, Panel, NavigateTo);
-        Palette = new CommandPaletteViewModel(NavigateTo, this);
+        Palette = new CommandPaletteViewModel(NavigateTo, this, undoService);
     }
 
     partial void OnCurrentPathChanged(string value)

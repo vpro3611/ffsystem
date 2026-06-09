@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FileSystemP.Core.CommandService;
+using FileSystemP.Core.Services;
 using FileSystemP.WPF.Views;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -11,7 +12,7 @@ namespace FileSystemP.WPF.ViewModels;
 
 public partial class CommandPaletteViewModel : ObservableObject
 {
-    private readonly Parser _parser = Parser.CreateParser();
+    private readonly Parser _parser;
     private readonly Action<string> _onNavigate;
     private readonly MainWindowViewModel _mainWindow;
     private string _currentDirectory = string.Empty;
@@ -39,10 +40,11 @@ public partial class CommandPaletteViewModel : ObservableObject
     public List<string> CommandHistory { get; } = new();
     private int _historyIndex = -1;
 
-    public CommandPaletteViewModel(Action<string> onNavigate, MainWindowViewModel mainWindow)
+    public CommandPaletteViewModel(Action<string> onNavigate, MainWindowViewModel mainWindow, IUndoService undoService)
     {
         _onNavigate = onNavigate;
         _mainWindow = mainWindow;
+        _parser = Parser.CreateParser(undoService);
         UpdatePrompt();
     }
 
@@ -69,13 +71,6 @@ public partial class CommandPaletteViewModel : ObservableObject
         if (cmdText.ToLower() == "clear")
         {
             OutputHistory.Clear();
-            Input = string.Empty;
-            return;
-        }
-
-        if (cmdText.ToLower() == "undo")
-        {
-            OutputHistory.Add(new TerminalLine("Undo is not yet implemented in the terminal.", Brushes.Yellow));
             Input = string.Empty;
             return;
         }
