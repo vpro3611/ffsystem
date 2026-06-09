@@ -19,7 +19,7 @@
         <ContextMenu x:Key="FolderMenu">
             <MenuItem Header="Open" Command="{Binding PlacementTarget.Tag.Panel.OpenCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <MenuItem Header="Rename" Command="{Binding PlacementTarget.Tag.Panel.RenameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="Copy" Command="{Binding Palette.ToggleVisibilityCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="Copy" Command="{Binding PlacementTarget.Tag.Panel.CopyCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <Separator/>
             <MenuItem Header="Delete" Command="{Binding PlacementTarget.Tag.Panel.DeleteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <Separator/>
@@ -28,6 +28,14 @@
             <MenuItem Header="New Folder" Command="{Binding PlacementTarget.Tag.Panel.NewFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <Separator/>
             <MenuItem Header="Properties" Command="{Binding PlacementTarget.Tag.Panel.ShowPropertiesCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+        </ContextMenu>
+
+        <ContextMenu x:Key="EmptySpaceMenu">
+            <MenuItem Header="Paste" Command="{Binding PlacementTarget.DataContext.Panel.PasteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <Separator/>
+            <MenuItem Header="New File" Command="{Binding PlacementTarget.DataContext.Panel.NewFileCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="New File with Content" Command="{Binding PlacementTarget.DataContext.Panel.NewFileWithContentCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="New Folder" Command="{Binding PlacementTarget.DataContext.Panel.NewFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
         </ContextMenu>
 
         <ContextMenu x:Key="TreeFolderMenu">
@@ -169,6 +177,7 @@
                                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
                                     <Setter Property="Padding" Value="4,3"/>
                                     <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=TreeView}}"/>
+                                    <Setter Property="ContextMenu" Value="{StaticResource TreeFolderMenu}"/>
                                 </Style>
                             </TreeView.ItemContainerStyle>
                         </TreeView>
@@ -187,7 +196,8 @@
                           Foreground="{DynamicResource AppForeground}"
                           BorderThickness="0"
                           MouseDoubleClick="FileList_MouseDoubleClick"
-                          PreviewMouseRightButtonDown="FileList_PreviewMouseRightButtonDown">
+                          PreviewMouseRightButtonDown="FileList_PreviewMouseRightButtonDown"
+                          ContextMenu="{StaticResource EmptySpaceMenu}">
                     <ListView.View>
                         <GridView>
                             <GridViewColumn Width="24">
@@ -203,6 +213,19 @@
                             <GridViewColumn Header="Date Modified" Width="140" DisplayMemberBinding="{Binding DateModified, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"/>
                         </GridView>
                     </ListView.View>
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListView}}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsDirectory}" Value="True">
+                                    <Setter Property="ContextMenu" Value="{StaticResource FolderMenu}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsDirectory}" Value="False">
+                                    <Setter Property="ContextMenu" Value="{StaticResource FileMenu}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListView.ItemContainerStyle>
                 </ListView>
             </Grid>
         </Grid>
