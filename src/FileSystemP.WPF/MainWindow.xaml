@@ -240,6 +240,12 @@
             <Separator Width="1" Margin="4,6" Background="{DynamicResource AppMuted}"/>
             <Button Content="Search" Command="{Binding ShowSearchMenuCommand}" Style="{StaticResource ToolbarButton}" Padding="10,4" FontSize="12" ToolTip="Open search menu"/>
             <Separator Width="1" Margin="4,6" Background="{DynamicResource AppMuted}"/>
+            <CheckBox Content="Show Hidden" 
+                      IsChecked="{Binding Panel.ShowHiddenFiles}"
+                      Foreground="{DynamicResource AppForeground}"
+                      VerticalAlignment="Center"
+                      Margin="10,0"/>
+            <Separator Width="1" Margin="4,6" Background="{DynamicResource AppMuted}"/>
             <Button Content="Terminal" Command="{Binding Palette.ToggleVisibilityCommand}" Style="{StaticResource ToolbarButton}" Padding="10,4" FontSize="12" ToolTip="Toggle Terminal (F12)"/>
         </StackPanel>
 
