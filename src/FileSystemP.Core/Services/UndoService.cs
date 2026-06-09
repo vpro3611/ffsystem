@@ -64,27 +64,62 @@ public record UndoDeleteAction(string OriginalPath) : IUndoAction
         // Use Shell32 to restore from Recycle Bin
         // ssfBITBUCKET = 10
         Type? shellType = Type.GetTypeFromProgID("Shell.Application");
-        if (shellType == null) return;
+        if (shellType == null)
+        {
+            Console.WriteLine("Could not find Shell.Application type.");
+            return;
+        }
         
         dynamic? shell = Activator.CreateInstance(shellType);
-        if (shell == null) return;
+        if (shell == null)
+        {
+            Console.WriteLine("Could not create Shell.Application instance.");
+            return;
+        }
 
         dynamic recycleBin = shell.NameSpace(10);
+        bool found = false;
+        
+        // Normalize search path
+        string normalizedOriginal = Path.GetFullPath(OriginalPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
         foreach (dynamic item in recycleBin.Items())
         {
-            // Column 1 is usually the "Original Location"
-            string itemOriginalPath = recycleBin.GetDetailsOf(item, 1);
             string itemName = recycleBin.GetDetailsOf(item, 0);
+            string itemOriginalLocation = recycleBin.GetDetailsOf(item, 1);
             
-            // Reconstruct full path if necessary, or just check OriginalPath
-            // GetDetailsOf(item, 1) returns the parent folder path
-            string fullItemPath = Path.Combine(itemOriginalPath, itemName);
+            string fullItemPath = Path.Combine(itemOriginalLocation, itemName).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-            if (string.Equals(fullItemPath, OriginalPath, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(fullItemPath, normalizedOriginal, StringComparison.OrdinalIgnoreCase))
             {
-                item.InvokeVerb("restore");
+                bool verbInvoked = false;
+                foreach (dynamic verb in item.Verbs())
+                {
+                    string verbName = verb.Name.Replace("&", "");
+                    // Try English and common localizations if needed, 
+                    // but "Restore" is often the internal name even if displayed differently.
+                    // However, we can also check for specific properties if this fails.
+                    if (string.Equals(verbName, "Restore", StringComparison.OrdinalIgnoreCase))
+                    {
+                        verb.DoIt();
+                        verbInvoked = true;
+                        break;
+                    }
+                }
+
+                if (!verbInvoked)
+                {
+                    item.InvokeVerb("restore");
+                }
+                
+                found = true;
                 break;
             }
+        }
+
+        if (!found)
+        {
+            Console.WriteLine($"Could not find '{OriginalPath}' in Recycle Bin.");
         }
     }
 }
