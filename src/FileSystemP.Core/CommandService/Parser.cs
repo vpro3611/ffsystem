@@ -1,4 +1,5 @@
-﻿using FileSystemP.Core.Services;
+﻿using FileSystemP.Core.AttributeService;
+using FileSystemP.Core.Services;
 
 namespace FileSystemP.Core.CommandService;
 
@@ -42,6 +43,10 @@ public class Parser : IParser
         ["--accessed-time"] = FlagsForCommands.LsAccessedTime,
         ["-ct"] = FlagsForCommands.LsCreatedTime,
         ["--created-time"] = FlagsForCommands.LsCreatedTime,
+        ["-oh"] = FlagsForCommands.LsOnlyHidden,
+        ["--only-hidden"] = FlagsForCommands.LsOnlyHidden,
+        ["-nh"] = FlagsForCommands.LsNoHidden,
+        ["--no-hidden"] = FlagsForCommands.LsNoHidden,
     };
 
     private static readonly Dictionary<string, string> CommandAndFlagDescriptions = new()
@@ -59,7 +64,7 @@ public class Parser : IParser
         ["helpflags"] = "Displays help information for available flags. Usage: helpflags or helpflags <flag>. Flags: none. Example: helpflags --overwrite",
         ["explain"] = "Explains one or more commands or flags. Usage: explain <target> [additional-targets]. Flags: none. Example: explain cp --overwrite",
         ["explainall"] = "Explains all available commands and flags. Flags: none. Example: explainall",
-        ["ls"] = "Lists the contents of the current directory or specific passed directory. Flags: none. Example: ls",
+        ["ls"] = "Lists the contents of the current directory or specific passed directory. Flags: none. Example: ls path",
         ["-o"] = "Overwrite flag. Used with: cp. Effect: allows the destination file to be replaced if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt -o",
         ["--overwrite"] = "Overwrite flag. Used with: cp. Effect: allows the destination file to be replaced if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt --overwrite",
         ["-r"] = "Recursive flag. Used with: del. Effect: allows deleting a directory together with all nested files and subdirectories. Example: del C:\\Temp\\Logs -r",
@@ -68,14 +73,18 @@ public class Parser : IParser
         ["--no-recursive"] = "No-recursive flag. Used with: del. Effect: deletes a directory only if it is empty; otherwise the operation fails. Example: del C:\\Temp\\Logs --no-recursive",
         ["-no"] = "No-overwrite flag. Used with: cp. Effect: prevents replacing the destination file if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt -no",
         ["--no-overwrite"] = "No-overwrite flag. Used with: cp. Effect: prevents replacing the destination file if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt --no-overwrite",
-        ["-s"] = "Size flag. Used with: ls. Effect: list files in directory sorted by size in ascending order (directories are evaluated as 0 for speed purposes). Example: ls -s",
-        ["--size"] = "Size flag. Used with: ls. Effect: list files in directory sorted by size in ascending order (directories are evaluated as 0 for speed purposes). Example: ls --size",
-        ["-mt"] = "Modified time flag. Used with: ls. Effect: list files in directory sorted by modified time in ascending order. Example: ls -mt",
-        ["--mod-time"] = "Modified time flag. Used with: ls. Effect: list files in directory sorted by modified time in ascending order. Example: ls --mod-time",
-        ["-at"] = "Accessed time flag. Used with: ls. Effect: list files in directory sorted by accessed time in ascending order. Example: ls -at",
-        ["--accessed-time"] = "Accessed time flag. Used with: ls. Effect: list files in directory sorted by accessed time in ascending order. Example: ls --accessed-time",
-        ["-ct"] = "Created time flag. Used with: ls. Effect: list files in directory sorted by created time in ascending order. Example: ls -ct",
-        ["--created-time"] = "Created time flag. Used with: ls. Effect: list files in directory sorted by created time in ascending order. Example: ls --created-time",
+        ["-s"] = "Size flag. Used with: ls. Effect: list files in directory sorted by size in ascending order (directories are evaluated as 0 for speed purposes). Example: ls path -s",
+        ["--size"] = "Size flag. Used with: ls. Effect: list files in directory sorted by size in ascending order (directories are evaluated as 0 for speed purposes). Example: ls path --size",
+        ["-mt"] = "Modified time flag. Used with: ls. Effect: list files in directory sorted by modified time in ascending order. Example: ls path -mt",
+        ["--mod-time"] = "Modified time flag. Used with: ls. Effect: list files in directory sorted by modified time in ascending order. Example: ls path --mod-time",
+        ["-at"] = "Accessed time flag. Used with: ls. Effect: list files in directory sorted by accessed time in ascending order. Example: ls path -at",
+        ["--accessed-time"] = "Accessed time flag. Used with: ls. Effect: list files in directory sorted by accessed time in ascending order. Example: ls path --accessed-time",
+        ["-ct"] = "Created time flag. Used with: ls. Effect: list files in directory sorted by created time in ascending order. Example: ls path -ct",
+        ["--created-time"] = "Created time flag. Used with: ls. Effect: list files in directory sorted by created time in ascending order. Example: ls path --created-time",
+        ["-oh"] = "Only hidden files flag. Used with: ls. Effect: list only hidden files in directory disregarding default files. Example: ls path -oh",
+        ["--only-hidden"] = "Only hidden files flag. Used with: ls. Effect: list only hidden files in directory disregarding default files. Example: ls path --only-hidden",
+        ["-nh"] = "No hidden files flag. Used with ls. Effect: list all files in directory including hidden files. Example: ls path -nh",
+        ["--no-hidden"] = "No hidden files flag. Used with ls. Effect: list all files in directory including hidden files. Example: ls path --no-hidden",
     };
 
 
@@ -417,6 +426,27 @@ private CommandResult ExecuteLsCore(
         description ?? $"List of files in directory `{path}`.");
 }
 
+private CommandResult ExecuteLsHidden(string path, bool hidden)
+{
+    var dirInfo = ValidateDirectoryInfo(path);
+    
+    IEnumerable<FileSystemInfo> entries =
+        FileDirectorySystemService.GetEntries(dirInfo.FullName);
+
+    if (hidden)
+    {
+        entries = entries.Where(e => e.Attributes.HasFlag(FileAttributes.Hidden));
+        Dictionary<string, FileSystemInfo> result = MapperHelper(entries.ToList());
+        return CommandResult.Ok(result, $"List of only hidden files in directory `{path}`.");
+    }
+    else
+    {
+        entries = entries.Where(e => !e.Attributes.HasFlag(FileAttributes.Hidden));
+        Dictionary<string, FileSystemInfo> result = MapperHelper(entries.ToList());
+        return CommandResult.Ok(result, $"List of all files in directory `{path}` excluding hidden files.");
+    }
+}
+
 private CommandResult ExecuteLs(
     AvailableCommands typedCommand,
     string nameOfCommand,
@@ -463,7 +493,13 @@ private CommandResult ExecuteLs(
                 path,
                 e => e.CreationTime,
                 $"List of files in directory `{path}` sorted by creation time in ascending order."),
-
+        
+        FlagsForCommands.LsOnlyHidden => 
+            ExecuteLsHidden(path, hidden: true),
+        
+        FlagsForCommands.LsNoHidden => 
+            ExecuteLsHidden(path, hidden: false),
+        
         FlagsForCommands.LsNone =>
             ExecuteLsCore(path),
 
