@@ -13,7 +13,8 @@ public class CommandPaletteViewModelTests
     [Fact]
     public async Task ExecuteCommand_Help_AddsToHistory()
     {
-        var vm = new CommandPaletteViewModel(p => {});
+        var mainVm = new MainWindowViewModel();
+        var vm = new CommandPaletteViewModel(p => {}, mainVm);
         vm.Input = "help";
         await vm.ExecuteCommand();
         Assert.NotEmpty(vm.OutputHistory);
@@ -32,7 +33,8 @@ public class CommandPaletteViewModelTests
             File.WriteAllText(filePath, "hello world");
             long fileSize = new FileInfo(filePath).Length;
 
-            var vm = new CommandPaletteViewModel(p => {});
+            var mainVm = new MainWindowViewModel();
+            var vm = new CommandPaletteViewModel(p => {}, mainVm);
             vm.UpdatePrompt(testDir);
             vm.Input = $"ls {testDir}";
 

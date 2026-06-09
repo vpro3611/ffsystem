@@ -549,4 +549,53 @@ public sealed class ParserTests : IDisposable
 
         Assert.Contains("Path not found", exception.Message);
     }
+
+    [Fact]
+    public async Task Back_ReturnsBackResult()
+    {
+        var result = await _parser.ExecuteAllParsed(["back"]);
+        Assert.True(result.Success);
+        Assert.True(result.ShouldGoBack);
+    }
+
+    [Fact]
+    public async Task Forward_ReturnsForwardResult()
+    {
+        var result = await _parser.ExecuteAllParsed(["forward"]);
+        Assert.True(result.Success);
+        Assert.True(result.ShouldGoForward);
+    }
+
+    [Fact]
+    public async Task Home_ReturnsHomeResultWithCorrectPath()
+    {
+        var result = await _parser.ExecuteAllParsed(["home"]);
+        Assert.True(result.Success);
+        Assert.NotNull(result.GoHomePath);
+        Assert.Equal(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), result.GoHomePath);
+    }
+
+    [Fact]
+    public async Task Undo_ReturnsUndoResult()
+    {
+        var result = await _parser.ExecuteAllParsed(["undo"]);
+        Assert.True(result.Success);
+        Assert.True(result.ShouldUndo);
+    }
+
+    [Fact]
+    public async Task Search_ReturnsSearchResult()
+    {
+        var result = await _parser.ExecuteAllParsed(["search"]);
+        Assert.True(result.Success);
+        Assert.True(result.ShouldOpenSearch);
+    }
+
+    [Fact]
+    public async Task Hidden_ReturnsHiddenResult()
+    {
+        var result = await _parser.ExecuteAllParsed(["hidden"]);
+        Assert.True(result.Success);
+        Assert.True(result.ShouldToggleHidden);
+    }
 }
