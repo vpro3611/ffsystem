@@ -514,4 +514,39 @@ public sealed class ParserTests : IDisposable
 
         Assert.Contains("requires at least 2 arguments", exception.Message);
     }
+
+    [Fact]
+    public async Task OpenProperties_WithCurrentDir_ReturnsDirectoryMetadata()
+    {
+        var result = await _parser.ExecuteAllParsed(["prop", "."], _tempDir);
+
+        Assert.True(result.Success);
+        Assert.True(result.ShouldOpenProperties);
+        var metadata = Assert.IsType<FileSystemP.Core.MetadataService.DTO.DirectoryNtfsMetadataRecord>(result.Payload);
+        Assert.Equal(_tempDir, metadata.FullPath);
+        Assert.Equal("Opening properties for " + _tempDir, result.Message);
+    }
+
+    [Fact]
+    public async Task OpenProperties_WithRelativeFilePath_ReturnsFileMetadata()
+    {
+        var fileName = "test.txt";
+        var filePath = Path.Combine(_tempDir, fileName);
+        File.WriteAllText(filePath, "test");
+
+        var result = await _parser.ExecuteAllParsed(["prop", fileName], _tempDir);
+
+        Assert.True(result.Success);
+        Assert.True(result.ShouldOpenProperties);
+        var metadata = Assert.IsType<FileSystemP.Core.MetadataService.DTO.NtfsMetadataRecord>(result.Payload);
+        Assert.Equal(filePath, metadata.FullPath);
+    }
+
+    [Fact]
+    public async Task OpenProperties_WithInvalidPath_ThrowsAppException()
+    {
+        var exception = await Assert.ThrowsAsync<AppException>(() => _parser.ExecuteAllParsed(["prop", "nonexistent"], _tempDir));
+
+        Assert.Contains("Path not found", exception.Message);
+    }
 }
