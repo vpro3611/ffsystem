@@ -83,8 +83,8 @@ public class Parser : IParser
         ["--created-time"] = "Created time flag. Used with: ls. Effect: list files in directory sorted by created time in ascending order. Example: ls path --created-time",
         ["-oh"] = "Only hidden files flag. Used with: ls. Effect: list only hidden files in directory disregarding default files. Example: ls path -oh",
         ["--only-hidden"] = "Only hidden files flag. Used with: ls. Effect: list only hidden files in directory disregarding default files. Example: ls path --only-hidden",
-        ["-nh"] = "No hidden files flag. Used with ls. Effect: list all files in directory including hidden files. Example: ls path -nh",
-        ["--no-hidden"] = "No hidden files flag. Used with ls. Effect: list all files in directory including hidden files. Example: ls path --no-hidden",
+        ["-nh"] = "No hidden files flag. Used with ls. Effect: list all files in directory excluding hidden files. Example: ls path -nh",
+        ["--no-hidden"] = "No hidden files flag. Used with ls. Effect: list all files in directory excluding hidden files. Example: ls path --no-hidden",
     };
 
 
