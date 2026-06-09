@@ -14,7 +14,8 @@ public static class FileDirectorySystemService
                 new EnumerationOptions
                 {
                     IgnoreInaccessible = true,
-                    RecurseSubdirectories = false
+                    RecurseSubdirectories = false,
+                    AttributesToSkip = 0
                 });
         }
         catch (Exception e)
