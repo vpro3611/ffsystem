@@ -17,6 +17,12 @@ public enum AvailableCommands
     ExplainAll,
     Ls,
     OpenProperties,
+    Back,
+    Forward, 
+    Home,
+    Undo,
+    Search,
+    Hidden,
 }
 
 public enum FlagsForCommands
