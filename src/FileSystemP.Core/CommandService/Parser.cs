@@ -6,6 +6,12 @@ namespace FileSystemP.Core.CommandService;
 
 public class Parser : IParser
 {
+    private readonly IUndoService? _undoService;
+
+    public Parser(IUndoService? undoService = null)
+    {
+        _undoService = undoService;
+    }
     
     private static readonly Dictionary<string, AvailableCommands> CommandMap = new()
     {
@@ -144,9 +150,9 @@ public class Parser : IParser
         ["--no-hidden"] = "No hidden files flag. Used with ls. Effect: list all files in directory excluding hidden files. Example: ls path --no-hidden",
     };
 
-    public static Parser CreateParser()
+    public static Parser CreateParser(IUndoService? undoService = null)
     {
-        return new Parser();
+        return new Parser(undoService);
     }
     
     private FlagsForCommands ValidateFlag(string potentialFlag, string nameOfCurrentCommand) 
@@ -272,88 +278,117 @@ public class Parser : IParser
         return CommandResult.Ok(new CdResult(entries, dirInfo.FullName), $"Validated path `{dirInfo.FullName}`.");
     }
     
-    private CommandResult ExecuteRename(AvailableCommands typedCommand, string nameOfCommand, List<string> command)
+    private string ResolvePath(string path, string currentDirectory)
+    {
+        if (string.IsNullOrEmpty(path)) return currentDirectory;
+        if (Path.IsPathRooted(path)) return path;
+        return Path.GetFullPath(Path.Combine(currentDirectory, path));
+    }
+
+    private CommandResult ExecuteRename(AvailableCommands typedCommand, string nameOfCommand, List<string> command, string currentDirectory)
     {
         if (!CheckMinLengthForEachCommand(typedCommand, command))
         {
             throw new AppException($"Command {nameOfCommand} requires at least 3 arguments!",
                 $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
         }
-        string pathForRename = command[1];
+        string pathForRename = ResolvePath(command[1], currentDirectory);
         string newName = command[2];
+        string newPath = Path.Combine(Path.GetDirectoryName(pathForRename)!, newName);
+
         FileDirectorySystemService.Rename(pathForRename, newName);
+        _undoService?.Push(new UndoRenameAction(newPath, pathForRename));
+
         return CommandResult.Ok(message: $"Renamed `{pathForRename}` to `{newName}`.");
     }
 
-    private CommandResult ExecuteDelete(AvailableCommands typedCommand, string nameOfCommand, List<string> command)
+    private CommandResult ExecuteDelete(AvailableCommands typedCommand, string nameOfCommand, List<string> command, string currentDirectory)
     {
         if (!CheckMinLengthForEachCommand(typedCommand, command))
         {
             throw new AppException($"Command {nameOfCommand} requires at least 3 arguments!",
                 $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
         }
-        string pathForDel = command[1];
+        string pathForDel = ResolvePath(command[1], currentDirectory);
         FlagsForCommands flag = ParseFlags(command[2], nameOfCommand, typedCommand);
         bool recursive = flag == FlagsForCommands.Recursive;
         FileDirectorySystemService.Delete(pathForDel, recursive);
         return CommandResult.Ok(message: $"Deleted `{pathForDel}`.");
     }
 
-    private CommandResult ExecuteCreateDirectory(AvailableCommands typedCommand, string nameOfCommand, List<string> command)
+    private CommandResult ExecuteCreateDirectory(AvailableCommands typedCommand, string nameOfCommand, List<string> command, string currentDirectory)
     {
         if (!CheckMinLengthForEachCommand(typedCommand, command))
         {
             throw new AppException($"Command {nameOfCommand} requires at least 2 argument!",
                 $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
         }
-        string pathForCreateDir = command[1];
+        string pathForCreateDir = ResolvePath(command[1], currentDirectory);
         FileDirectorySystemService.CreateDirectory(pathForCreateDir);
+        _undoService?.Push(new UndoCreateAction(pathForCreateDir));
         return CommandResult.Ok(message: $"Created directory `{pathForCreateDir}`.");
     }
 
-    private CommandResult ExecuteCreateFile(AvailableCommands typedCommand, string nameOfCommand, List<string> command)
+    private CommandResult ExecuteCreateFile(AvailableCommands typedCommand, string nameOfCommand, List<string> command, string currentDirectory)
     {
         if (!CheckMinLengthForEachCommand(typedCommand, command))
         {
             throw new AppException($"Command {nameOfCommand} requires at least 2 argument!",
                 $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
         }
-        string pathForCreateFile = command[1];
+        string pathForCreateFile = ResolvePath(command[1], currentDirectory);
         FileDirectorySystemService.CreateFile(pathForCreateFile);
+        _undoService?.Push(new UndoCreateAction(pathForCreateFile));
         return CommandResult.Ok(message: $"Created file `{pathForCreateFile}`.");
     }
 
     private async Task<CommandResult> ExecuteCreateFileWithContent(AvailableCommands typedCommand, string nameOfCommand,
-        List<string> command)
+        List<string> command, string currentDirectory)
     {
         if (!CheckMinLengthForEachCommand(typedCommand, command))
         {
             throw new AppException($"Command {nameOfCommand} requires at least 3 arguments!",
                 $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
         }
-        string pathForCreateFile = command[1];
+        string pathForCreateFile = ResolvePath(command[1], currentDirectory);
         string content = command[2];
         await FileDirectorySystemService.CreateFileWithContent(pathForCreateFile, content);
+        _undoService?.Push(new UndoCreateAction(pathForCreateFile));
         return CommandResult.Ok(message: $"Created file `{pathForCreateFile}` with content.");
     }
     
-    private CommandResult ExecuteCopy(AvailableCommands typedCommand, string nameOfCommand, List<string> command)
+    private CommandResult ExecuteCopy(AvailableCommands typedCommand, string nameOfCommand, List<string> command, string currentDirectory)
     {
         if (!CheckMinLengthForEachCommand(typedCommand, command))
         {
             throw new AppException($"Command {nameOfCommand} requires at least 4 arguments!",
                 $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
         }
-        string source = command[1];
-        string destination = command[2]; // WARNING - check for indexes!!!
+        string source = ResolvePath(command[1], currentDirectory);
+        string destination = ResolvePath(command[2], currentDirectory);
         FlagsForCommands flagCopy = ParseFlags(command[3], nameOfCommand, typedCommand);
                 
         bool overwrites = flagCopy == FlagsForCommands.Overwrite;
+        
+        // Calculate final destination for undo
+        string finalDestination = destination;
+        if (Directory.Exists(destination))
+        {
+            string fileName = Path.GetFileName(source);
+            finalDestination = Path.Combine(destination, fileName);
+        }
+
         FileDirectorySystemService.Copy(source, destination, overwrites);
+        
+        // Only push undo if we didn't overwrite something important 
+        // (Actually, if we overwrite, UndoCreateAction will delete the new file, 
+        // but we won't get the old one back. This is a limitation for now).
+        _undoService?.Push(new UndoCreateAction(finalDestination));
+
         return CommandResult.Ok(message: $"Copied `{source}` to `{destination}` with overwrite flag being set to `{overwrites}`.");
     }
 
-    private async Task<CommandResult> ExecuteReadFileContents(AvailableCommands typedCommand, string nameOfCommand, List<string> command)
+    private async Task<CommandResult> ExecuteReadFileContents(AvailableCommands typedCommand, string nameOfCommand, List<string> command, string currentDirectory)
     {
         if (!CheckMinLengthForEachCommand(typedCommand, command))
         {
@@ -361,7 +396,7 @@ public class Parser : IParser
                 $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
         }
 
-        string path = command[1];
+        string path = ResolvePath(command[1], currentDirectory);
         int? linesToRead = command.Count == 3 ? int.Parse(command[2]) : null;
 
         if (linesToRead is null)
@@ -724,13 +759,13 @@ private CommandResult ExecuteToggleHidden(AvailableCommands typedCommand, string
         return typedCommand switch
         {
             AvailableCommands.Cd => ExecuteCd(typedCommand, nameOfCommand, command),
-            AvailableCommands.Rename => ExecuteRename(typedCommand, nameOfCommand, command),
-            AvailableCommands.Delete => ExecuteDelete(typedCommand, nameOfCommand, command),
-            AvailableCommands.CreateDirectory => ExecuteCreateDirectory(typedCommand, nameOfCommand, command),
-            AvailableCommands.CreateFile => ExecuteCreateFile(typedCommand, nameOfCommand, command),
-            AvailableCommands.CreateFileWithContent => await ExecuteCreateFileWithContent(typedCommand, nameOfCommand, command),
-            AvailableCommands.Copy => ExecuteCopy(typedCommand, nameOfCommand, command),
-            AvailableCommands.ReadFileContents => await ExecuteReadFileContents(typedCommand, nameOfCommand, command),
+            AvailableCommands.Rename => ExecuteRename(typedCommand, nameOfCommand, command, currentDirectory),
+            AvailableCommands.Delete => ExecuteDelete(typedCommand, nameOfCommand, command, currentDirectory),
+            AvailableCommands.CreateDirectory => ExecuteCreateDirectory(typedCommand, nameOfCommand, command, currentDirectory),
+            AvailableCommands.CreateFile => ExecuteCreateFile(typedCommand, nameOfCommand, command, currentDirectory),
+            AvailableCommands.CreateFileWithContent => await ExecuteCreateFileWithContent(typedCommand, nameOfCommand, command, currentDirectory),
+            AvailableCommands.Copy => ExecuteCopy(typedCommand, nameOfCommand, command, currentDirectory),
+            AvailableCommands.ReadFileContents => await ExecuteReadFileContents(typedCommand, nameOfCommand, command, currentDirectory),
             AvailableCommands.Exit => ExecuteExit(typedCommand, nameOfCommand, command),
             AvailableCommands.Help => ExecuteHelp(typedCommand, nameOfCommand, command),
             AvailableCommands.HelpForFlags => ExecuteHelpForFlags(typedCommand, nameOfCommand, command),
