@@ -1,4 +1,5 @@
 ﻿using FileSystemP.Core.AttributeService;
+using FileSystemP.Core.MetadataService.Providers.Ntfs;
 using FileSystemP.Core.Services;
 
 namespace FileSystemP.Core.CommandService;
@@ -22,7 +23,8 @@ public class Parser : IParser
         ["helpflags"] = AvailableCommands.HelpForFlags,
         ["explain"] = AvailableCommands.Explain,
         ["explainall"] = AvailableCommands.ExplainAll,
-        ["ls"] = AvailableCommands.Ls
+        ["ls"] = AvailableCommands.Ls,
+        ["prop"] = AvailableCommands.OpenProperties
     };
 
     private static readonly Dictionary<string, FlagsForCommands> FlagMap = new()
@@ -65,6 +67,7 @@ public class Parser : IParser
         ["explain"] = "Explains one or more commands or flags. Usage: explain <target> [additional-targets]. Flags: none. Example: explain cp --overwrite",
         ["explainall"] = "Explains all available commands and flags. Flags: none. Example: explainall",
         ["ls"] = "Lists the contents of the current directory or specific passed directory. Flags: none. Example: ls path",
+        ["prop"] = "Command used to open properties of a specific path, showing general metadata from NTFS, detailed metadata from SHELL, and security. Flags: none. Example: prop path",
         ["-o"] = "Overwrite flag. Used with: cp. Effect: allows the destination file to be replaced if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt -o",
         ["--overwrite"] = "Overwrite flag. Used with: cp. Effect: allows the destination file to be replaced if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt --overwrite",
         ["-r"] = "Recursive flag. Used with: del. Effect: allows deleting a directory together with all nested files and subdirectories. Example: del C:\\Temp\\Logs -r",
@@ -147,7 +150,9 @@ public class Parser : IParser
             case AvailableCommands.ExplainAll:
                 return noCommandArray.Count == 0;
             case AvailableCommands.Ls:
-                    return noCommandArray.Count >= 1 && noCommandArray.Count <= 2; // [ls] dir --flag
+                return noCommandArray.Count >= 1 && noCommandArray.Count <= 2; // [ls] dir --flag
+            case AvailableCommands.OpenProperties:
+                return noCommandArray.Count == 1;
             default:
                 return false;
         }
@@ -507,7 +512,42 @@ private CommandResult ExecuteLs(
             "Invalid flag provided. Type 'help' to see all available flags and 'explain <flag>' to see the description of the flag.")
     };
 }
-    
+
+private CommandResult ExecuteOpenProperties(AvailableCommands typedCommand, string nameOfCommand, List<string> command, string currentDirectory)
+{
+    if (!CheckMinLengthForEachCommand(typedCommand, command))
+    {
+        throw new AppException(
+            $"Command {nameOfCommand} requires at least 2 arguments!",
+            $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
+    }
+
+    string path = command[1] == "." ? currentDirectory : command[1];
+
+    if (!Path.IsPathRooted(path))
+    {
+        path = Path.GetFullPath(Path.Combine(currentDirectory, path));
+    }
+
+    var provider = new NtfsMetadataProvider();
+    object metadata;
+
+    if (Directory.Exists(path))
+    {
+        metadata = provider.GetDirectoryMetadata(path);
+    }
+    else if (File.Exists(path))
+    {
+        metadata = provider.GetFileMetadata(path);
+    }
+    else
+    {
+        throw new AppException($"Path not found: {path}", $"{nameof(Parser)}.{nameof(ExecuteOpenProperties)}()");
+    }
+
+    return CommandResult.OpenProperties(metadata, $"Opening properties for {path}");
+}
+
     private CommandResult ExecuteDefault(string nameOfCommand)
     {
         return CommandResult.NoOp(message: $"Command `{nameOfCommand}` not found. Type 'help' to see all available commands.");
@@ -535,6 +575,7 @@ private CommandResult ExecuteLs(
             AvailableCommands.Explain => ExecuteExplain(typedCommand, nameOfCommand, command),
             AvailableCommands.ExplainAll => ExecuteExplainAll(typedCommand, nameOfCommand, command),
             AvailableCommands.Ls => ExecuteLs(typedCommand, nameOfCommand, command, currentDirectory),
+            AvailableCommands.OpenProperties => ExecuteOpenProperties(typedCommand, nameOfCommand, command, currentDirectory),
             _ => ExecuteDefault(nameOfCommand)
         };
     }

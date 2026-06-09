@@ -15,7 +15,8 @@ public enum AvailableCommands
     HelpForFlags,
     Explain,
     ExplainAll,
-    Ls
+    Ls,
+    OpenProperties,
 }
 
 public enum FlagsForCommands
