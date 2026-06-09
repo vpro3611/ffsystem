@@ -62,8 +62,14 @@ public partial class SearchViewModel : ObservableObject
     }
 
     [RelayCommand(CanExecute = nameof(CanStartSearch))]
-    private async Task StartSearch(string currentPath)
+    private async Task StartSearch(string? currentPath)
     {
+        if (string.IsNullOrEmpty(currentPath))
+        {
+            _panel.ErrorMessage = "Please select a directory to search in.";
+            return;
+        }
+
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
         IsSearching = true;
@@ -96,10 +102,15 @@ public partial class SearchViewModel : ObservableObject
         {
             var searchResult = await _searchService.SearchAsync(currentPath, options, _cts.Token);
             _panel.ErrorMessage = null;
-            foreach (var entry in searchResult.FoundEntries)
+            
+            // Map results to FileEntry objects
+            var entries = searchResult.FoundEntries.Select(MapToFileEntry).ToList();
+            
+            foreach (var entry in entries)
             {
-                _panel.Entries.Add(MapToFileEntry(entry));
+                _panel.Entries.Add(entry);
             }
+            
             _panel.IsEmpty = _panel.Entries.Count == 0;
             if (_panel.IsEmpty) _panel.ErrorMessage = "No results found.";
         }
