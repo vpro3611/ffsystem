@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FileSystemP.Core.CommandService;
+using FileSystemP.WPF.Views;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -171,6 +172,11 @@ public partial class CommandPaletteViewModel : ObservableObject
             if (result.ShouldExit)
             {
                 Application.Current.Shutdown();
+            }
+
+            if (result.ShouldOpenProperties && result.Payload != null)
+            {
+                PropertiesWindow.ShowFor(result.Payload, Application.Current.MainWindow);
             }
 
             // Handle navigation
