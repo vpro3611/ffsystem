@@ -28,5 +28,7 @@ public enum FlagsForCommands
     LsModTime,
     LsAccessedTime,
     LsCreatedTime,
+    LsOnlyHidden,
+    LsNoHidden,
     LsNone
 }
