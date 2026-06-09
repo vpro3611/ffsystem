@@ -42,6 +42,14 @@ public partial class FilePanelViewModel : ObservableObject
     [ObservableProperty]
     private double _copyProgress;
 
+    [ObservableProperty]
+    private bool _showHiddenFiles;
+
+    partial void OnShowHiddenFilesChanged(bool value)
+    {
+        _ = LoadEntries(_currentPath);
+    }
+
     partial void OnClipboardPathChanged(string? value)
     {
         PasteCommand.NotifyCanExecuteChanged();
@@ -61,6 +69,7 @@ public partial class FilePanelViewModel : ObservableObject
         {
             var entries = await Task.Run(() =>
                 FileDirectorySystemService.GetEntries(path)
+                    .Where(e => ShowHiddenFiles || !e.Attributes.HasFlag(FileAttributes.Hidden))
                     .Select(MapToEntry)
                     .ToList());
             Entries.Clear();
