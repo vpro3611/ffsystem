@@ -102,6 +102,8 @@ public partial class CommandPaletteViewModel : ObservableObject
     // This command currently performs its own flag parsing.
     // Future refactor: use Parser.ParseFlags() result instead
     // so command validation remains consistent with the backend parser.
+    // also, this action IS NOT getting pushed to undo stack, so we cannot undo this,
+    // keep this in mind!!!!!
 
     private async Task ExecuteCopyCommand(List<string> parts)
     {
