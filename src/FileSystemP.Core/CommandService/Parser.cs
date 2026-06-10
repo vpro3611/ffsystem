@@ -1,4 +1,5 @@
 ﻿using FileSystemP.Core.MetadataService.Providers.Ntfs;
+using FileSystemP.Core.SearchService.Options;
 using FileSystemP.Core.Services;
 
 namespace FileSystemP.Core.CommandService;
@@ -36,6 +37,7 @@ public class Parser : IParser
         ["undo"] = AvailableCommands.Undo,
         ["search"] = AvailableCommands.Search,
         ["hidden"] = AvailableCommands.Hidden,
+        ["find"] = AvailableCommands.Find,
     };
 
     private static readonly Dictionary<string, FlagsForCommands> FlagMap = new()
@@ -60,6 +62,10 @@ public class Parser : IParser
         ["--only-hidden"] = FlagsForCommands.LsOnlyHidden,
         ["-nh"] = FlagsForCommands.LsNoHidden,
         ["--no-hidden"] = FlagsForCommands.LsNoHidden,
+        ["-e"] = FlagsForCommands.FindExact,
+        ["--exact"] = FlagsForCommands.FindExact,
+        ["-p"] = FlagsForCommands.FindPattern,
+        ["--pattern"] = FlagsForCommands.FindPattern,
     };
     
     private static readonly Dictionary<AvailableCommands, List<FlagsForCommands>> CommandFlagsMap = new()
@@ -101,6 +107,11 @@ public class Parser : IParser
         [AvailableCommands.Undo] = [],
         [AvailableCommands.Search] = [],
         [AvailableCommands.Hidden] = [],
+        [AvailableCommands.Find] =
+        [
+            FlagsForCommands.FindExact,
+            FlagsForCommands.FindPattern
+        ],
     };
     
     
@@ -128,6 +139,7 @@ public class Parser : IParser
         ["undo"] = "Reverts the most recent file system action when that action supports undo. Typical operations may include rename, create, delete, or copy depending on implementation. Flags: none. Example: undo",
         ["search"] = "Opens the search interface or search workflow for locating files and directories. Results are determined by the underlying search implementation. Flags: none. Example: search",
         ["hidden"] = "Toggles whether hidden files and directories are displayed in directory listings and navigation views. When enabled, hidden items are shown; when disabled, hidden items are concealed. Flags: none. Example: hidden",
+        ["find"] = "Finds files and directories corresponding to a provided name or pattern. Flags: -e/--exact (exact match), -p/--pattern (glob pattern). Example: find *.txt -p",
         ["-o"] = "Overwrite flag. Used with: cp. Effect: allows the destination file to be replaced if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt -o",
         ["--overwrite"] = "Overwrite flag. Used with: cp. Effect: allows the destination file to be replaced if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt --overwrite",
         ["-r"] = "Recursive flag. Used with: del. Effect: allows deleting a directory together with all nested files and subdirectories. Example: del C:\\Temp\\Logs -r",
@@ -148,6 +160,10 @@ public class Parser : IParser
         ["--only-hidden"] = "Only hidden files flag. Used with: ls. Effect: list only hidden files in directory disregarding default files. Example: ls path --only-hidden",
         ["-nh"] = "No hidden files flag. Used with ls. Effect: list all files in directory excluding hidden files. Example: ls path -nh",
         ["--no-hidden"] = "No hidden files flag. Used with ls. Effect: list all files in directory excluding hidden files. Example: ls path --no-hidden",
+        ["-e"] = "Exact match flag. Used with find. Effect: finds items with the exact name provided (case-insensitive). Example: find MyFile.txt -e",
+        ["--exact"] = "Exact match flag. Used with find. Effect: finds items with the exact name provided (case-insensitive). Example: find MyFile.txt --exact",
+        ["-p"] = "Pattern match flag. Used with find. Effect: finds items matching a glob pattern (e.g., *.txt). Example: find *.txt -p",
+        ["--pattern"] = "Pattern match flag. Used with find. Effect: finds items matching a glob pattern (e.g., *.txt). Example: find *.txt --pattern",
     };
 
     public static Parser CreateParser(IUndoService? undoService = null)
@@ -243,6 +259,8 @@ public class Parser : IParser
                 return noCommandArray.Count == 0;
             case AvailableCommands.Hidden:
                 return noCommandArray.Count == 0;
+            case AvailableCommands.Find:
+                return noCommandArray.Count == 1 || noCommandArray.Count == 2; // [find] name --flag (2) OR [find] name (1), so should contain 1 OR 2 elements without a command. 
             default:
                 return false;
         }
@@ -744,9 +762,45 @@ private CommandResult ExecuteToggleHidden(AvailableCommands typedCommand, string
     }
 
     return CommandResult.ToggleHidden("Toggled hidden switch");
+    }
+
+    private async Task<CommandResult> ExecuteFind(AvailableCommands typedCommand, string nameOfCommand,
+    List<string> command, string currentDirectory)
+{
+    if (!CheckMinLengthForEachCommand(typedCommand, command))
+    {
+        throw new AppException(
+            $"Command {nameOfCommand} requires at least 2 arguments! (3 in case of find with a specific flag)",
+            $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
+    }
+
+    string searchTerm = command[1];
+    FlagsForCommands flag = 
+        command.Count == 3 
+            ? ParseFlags(command[2], nameOfCommand, typedCommand)
+            : FlagsForCommands.FindNone;
+
+    var mode = flag switch
+    {
+        FlagsForCommands.FindExact => NameSearchMode.Exact,
+        FlagsForCommands.FindPattern => NameSearchMode.Pattern,
+        _ => NameSearchMode.Contains
+    };
+
+    var options = new ExtendedOptions(
+        SearchOption.AllDirectories,
+        SearchTargetType.Both,
+        searchTerm,
+        mode
+    );
+
+    var searchService = new FileSystemP.Core.SearchService.SearchService();
+    var results = await searchService.SearchAsync(currentDirectory, options);
+
+    var payload = MapperHelper(results.FoundEntries.ToList());
+    // var payload = results.FoundEntries.ToDictionary(r => r.FullName, r => r);
+    return CommandResult.Ok(payload, $"Found {results.FoundEntries.Count} matches for '{searchTerm}' (Mode: {mode})");
 }
-
-
 
     private CommandResult ExecuteDefault(string nameOfCommand)
     {
@@ -782,6 +836,7 @@ private CommandResult ExecuteToggleHidden(AvailableCommands typedCommand, string
             AvailableCommands.Undo => ExecuteUndo(typedCommand, nameOfCommand, command),
             AvailableCommands.Search => ExecuteOpenSearch(typedCommand, nameOfCommand, command),
             AvailableCommands.Hidden => ExecuteToggleHidden(typedCommand, nameOfCommand, command),
+            AvailableCommands.Find => await ExecuteFind(typedCommand, nameOfCommand, command, currentDirectory),
             _ => ExecuteDefault(nameOfCommand)
         };
     }

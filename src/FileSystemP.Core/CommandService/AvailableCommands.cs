@@ -23,6 +23,7 @@ public enum AvailableCommands
     Undo,
     Search,
     Hidden,
+    Find
 }
 
 public enum FlagsForCommands
@@ -37,5 +38,8 @@ public enum FlagsForCommands
     LsCreatedTime,
     LsOnlyHidden,
     LsNoHidden,
-    LsNone
+    LsNone,
+    FindExact,
+    FindPattern,
+    FindNone
 }
