@@ -20,6 +20,7 @@ public partial class SearchViewModel : ObservableObject
     private CancellationTokenSource? _cts;
 
     [ObservableProperty] private string _pattern = string.Empty;
+    [ObservableProperty] private NameSearchMode _nameMode = NameSearchMode.Contains;
     [ObservableProperty] private SearchTargetType _targetType = SearchTargetType.Both;
     [ObservableProperty] private bool _recursive = true;
     [ObservableProperty] private string _extensions = string.Empty;
@@ -82,6 +83,7 @@ public partial class SearchViewModel : ObservableObject
             Option: Recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly,
             TargetType: TargetType,
             Pattern: string.IsNullOrWhiteSpace(Pattern) ? null : Pattern,
+            NameMode: NameMode,
             Extensions: ParseExtensions(),
             Attributes: GetSelectedAttributes(),
             AboveSize: AboveSize.HasValue ? AboveSize.Value * 1024 * 1024 : null, // Convert MB to Bytes
