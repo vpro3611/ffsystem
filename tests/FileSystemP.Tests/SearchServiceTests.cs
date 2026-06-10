@@ -122,6 +122,7 @@ public class SearchServiceTests : IDisposable
             Option: SearchOption.TopDirectoryOnly,
             TargetType: SearchTargetType.Both,
             Pattern: null,
+            NameMode: NameSearchMode.Contains,
             Extensions: null,
             Attributes: null,
             AboveSize: null,
