@@ -129,6 +129,12 @@
             <local:SearchTargetType>Directories</local:SearchTargetType>
         </x:Array>
 
+        <x:Array x:Key="SearchNameModes" Type="local:NameSearchMode">
+            <local:NameSearchMode>Contains</local:NameSearchMode>
+            <local:NameSearchMode>Exact</local:NameSearchMode>
+            <local:NameSearchMode>Pattern</local:NameSearchMode>
+        </x:Array>
+
         <ContextMenu x:Key="EmptySpaceMenu">
             <MenuItem Header="Paste" Command="{Binding PlacementTarget.DataContext.Panel.PasteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <Separator/>
@@ -302,6 +308,12 @@
                                          Foreground="{DynamicResource AppForeground}"
                                          Background="{DynamicResource AppBackground}"
                                          BorderBrush="{DynamicResource AppMuted}"/>
+
+                                <TextBlock Text="Name Match Mode" Foreground="{DynamicResource AppMuted}"/>
+                                <ComboBox SelectedItem="{Binding Search.NameMode}"
+                                          ItemsSource="{Binding Source={StaticResource SearchNameModes}}"
+                                          Style="{StaticResource SidebarComboBoxStyle}"
+                                          Margin="0,4,0,10"/>
 
                                 <TextBlock Text="Target Type" Foreground="{DynamicResource AppMuted}"/>
                                 <ComboBox SelectedItem="{Binding Search.TargetType}"
