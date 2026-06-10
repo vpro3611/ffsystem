@@ -67,8 +67,20 @@ public class SearchService : ISearchService
         if (options.TargetType == SearchTargetType.Directories && !isDir) return false;
 
         // Pattern Match
-        if (options.Pattern is not null && !info.Name.Contains(options.Pattern, StringComparison.OrdinalIgnoreCase))
-            return false;
+        if (options.Pattern is not null)
+        {
+            bool matches = options.NameMode switch
+            {
+                NameSearchMode.Exact => string.Equals(info.Name, options.Pattern, StringComparison.OrdinalIgnoreCase),
+                NameSearchMode.Contains => info.Name.Contains(options.Pattern, StringComparison.OrdinalIgnoreCase),
+                NameSearchMode.Pattern => System.Text.RegularExpressions.Regex.IsMatch(info.Name, 
+                                              "^" + System.Text.RegularExpressions.Regex.Escape(options.Pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$", 
+                                              System.Text.RegularExpressions.RegexOptions.IgnoreCase),
+                _ => false
+            };
+
+            if (!matches) return false;
+        }
 
         // Extension Match (Files only)
         if (options.Extensions is not null)
