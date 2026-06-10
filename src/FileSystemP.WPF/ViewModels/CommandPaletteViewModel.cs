@@ -165,7 +165,7 @@ public partial class CommandPaletteViewModel : ObservableObject
             {
                 foreach (var kvp in lsResult)
                 {
-                    string size = kvp.Value is FileInfo file ? $" ({file.Length} bytes)" : "";
+                    string size = kvp.Value is FileInfo file ? $" ({FormatSize(file.Length)})" : "";
                     OutputHistory.Add(new TerminalLine($"[{kvp.Key}] {kvp.Value.Name} - {kvp.Value.FullName}{size}", Brushes.White));
                 }
             }
@@ -239,6 +239,14 @@ public partial class CommandPaletteViewModel : ObservableObject
                 _onNavigate?.Invoke(cdResult.FullPath);
             }
         }
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        if (bytes < 1024 * 1024 * 1024) return $"{bytes / (1024.0 * 1024):F1} MB";
+        return $"{bytes / (1024.0 * 1024 * 1024):F1} GB";
     }
 
     [RelayCommand]
