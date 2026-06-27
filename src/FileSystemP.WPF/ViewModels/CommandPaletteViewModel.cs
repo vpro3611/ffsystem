@@ -233,6 +233,11 @@ public partial class CommandPaletteViewModel : ObservableObject
                 OutputHistory.Add(new TerminalLine($"Show Hidden Files: {_mainWindow.Panel.ShowHiddenFiles}", Brushes.White));
             }
 
+            if (result.ShouldOpenFile && result.PathToOpen != null)
+            {
+                _mainWindow.Panel.OpenPath(result.PathToOpen);
+            }
+
             // Handle navigation
             if (parts[0].ToLower() == "cd" && result.Payload is CdResult cdResult)
             {

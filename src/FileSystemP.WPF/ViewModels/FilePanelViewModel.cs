@@ -17,6 +17,7 @@ namespace FileSystemP.WPF.ViewModels;
 public partial class FilePanelViewModel : ObservableObject
 {
     private readonly Action<string> _navigate;
+    private readonly Action<string> _openFile;
     private readonly INtfsMetadataProvider _metadataProvider;
     private readonly IUndoService _undoService;
     private string _currentPath = string.Empty;
@@ -55,9 +56,10 @@ public partial class FilePanelViewModel : ObservableObject
         PasteCommand.NotifyCanExecuteChanged();
     }
 
-    public FilePanelViewModel(Action<string> navigate, INtfsMetadataProvider metadataProvider, IUndoService undoService)
+    public FilePanelViewModel(Action<string> navigate, INtfsMetadataProvider metadataProvider, IUndoService undoService, Action<string>? openFile = null)
     {
         _navigate = navigate;
+        _openFile = openFile ?? OpenFileWithShell;
         _metadataProvider = metadataProvider;
         _undoService = undoService;
         _undoService.CanUndoChanged += (s, e) => UndoCommand.NotifyCanExecuteChanged();
@@ -91,25 +93,34 @@ public partial class FilePanelViewModel : ObservableObject
     {
         if (SelectedEntry is null) return;
 
-        if (SelectedEntry.IsDirectory)
+        OpenPath(SelectedEntry.FilePath);
+    }
+
+    public void OpenPath(string path)
+    {
+        if (Directory.Exists(path))
         {
-            _navigate(SelectedEntry.FilePath);
+            _navigate(path);
+            return;
         }
-        else
+
+        try
         {
-            try
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = SelectedEntry.FilePath,
-                    UseShellExecute = true
-                })?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            _openFile(path);
         }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private static void OpenFileWithShell(string path)
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = path,
+            UseShellExecute = true
+        })?.Dispose();
     }
 
     [RelayCommand]
