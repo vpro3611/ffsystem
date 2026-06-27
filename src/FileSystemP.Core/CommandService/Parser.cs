@@ -38,6 +38,7 @@ public class Parser : IParser
         ["search"] = AvailableCommands.Search,
         ["hidden"] = AvailableCommands.Hidden,
         ["find"] = AvailableCommands.Find,
+        ["open"] = AvailableCommands.OpenFile
     };
 
     private static readonly Dictionary<string, FlagsForCommands> FlagMap = new()
@@ -112,6 +113,7 @@ public class Parser : IParser
             FlagsForCommands.FindExact,
             FlagsForCommands.FindPattern
         ],
+        [AvailableCommands.OpenFile] = [],
     };
     
     
@@ -140,6 +142,7 @@ public class Parser : IParser
         ["search"] = "Opens the search interface or search workflow for locating files and directories. Results are determined by the underlying search implementation. Flags: none. Example: search",
         ["hidden"] = "Toggles whether hidden files and directories are displayed in directory listings and navigation views. When enabled, hidden items are shown; when disabled, hidden items are concealed. Flags: none. Example: hidden",
         ["find"] = "Finds files and directories corresponding to a provided name or pattern. Flags: -e/--exact (exact match), -p/--pattern (glob pattern). Example: find *.txt -p",
+        ["open"] = "Opens a file with the default application associated with its file type. Usage: open <path>. Flags: none. Example: open C:\\Temp\\notes.txt",
         ["-o"] = "Overwrite flag. Used with: cp. Effect: allows the destination file to be replaced if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt -o",
         ["--overwrite"] = "Overwrite flag. Used with: cp. Effect: allows the destination file to be replaced if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt --overwrite",
         ["-r"] = "Recursive flag. Used with: del. Effect: allows deleting a directory together with all nested files and subdirectories. Example: del C:\\Temp\\Logs -r",
@@ -261,6 +264,8 @@ public class Parser : IParser
                 return noCommandArray.Count == 0;
             case AvailableCommands.Find:
                 return noCommandArray.Count == 1 || noCommandArray.Count == 2; // [find] name --flag (2) OR [find] name (1), so should contain 1 OR 2 elements without a command. 
+            case AvailableCommands.OpenFile:
+                return noCommandArray.Count == 1;
             default:
                 return false;
         }
@@ -802,6 +807,25 @@ private CommandResult ExecuteToggleHidden(AvailableCommands typedCommand, string
     return CommandResult.Ok(payload, $"Found {results.FoundEntries.Count} matches for '{searchTerm}' (Mode: {mode})");
 }
 
+    private CommandResult ExecuteOpenFile(AvailableCommands typedCommand, string nameOfCommand, List<string> command, string currentDirectory)
+    {
+        if (!CheckMinLengthForEachCommand(typedCommand, command))
+        {
+            throw new AppException(
+                $"Command {nameOfCommand} requires at least 2 arguments!",
+                $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
+        }
+
+        string pathToOpenFile = ResolvePath(command[1], currentDirectory);
+
+        if (!File.Exists(pathToOpenFile))
+        {
+            throw new AppException($"File not found for opening: {pathToOpenFile}", $"{nameof(Parser)}.{nameof(ExecuteOpenFile)}()");
+        }
+        
+        return CommandResult.OpenFile(pathToOpenFile, $"Opening file: {pathToOpenFile}");
+    }
+    
     private CommandResult ExecuteDefault(string nameOfCommand)
     {
         return CommandResult.NoOp(message: $"Command `{nameOfCommand}` not found. Type 'help' to see all available commands.");
@@ -837,6 +861,7 @@ private CommandResult ExecuteToggleHidden(AvailableCommands typedCommand, string
             AvailableCommands.Search => ExecuteOpenSearch(typedCommand, nameOfCommand, command),
             AvailableCommands.Hidden => ExecuteToggleHidden(typedCommand, nameOfCommand, command),
             AvailableCommands.Find => await ExecuteFind(typedCommand, nameOfCommand, command, currentDirectory),
+            AvailableCommands.OpenFile => ExecuteOpenFile(typedCommand, nameOfCommand, command, currentDirectory),
             _ => ExecuteDefault(nameOfCommand)
         };
     }

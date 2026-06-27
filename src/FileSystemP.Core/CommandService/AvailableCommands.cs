@@ -23,7 +23,8 @@ public enum AvailableCommands
     Undo,
     Search,
     Hidden,
-    Find
+    Find,
+    OpenFile
 }
 
 public enum FlagsForCommands
