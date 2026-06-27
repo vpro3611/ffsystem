@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using FileSystemP.Core.CommandService;
 using FileSystemP.Core.Services;
 using FileSystemP.WPF.Views;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
@@ -58,6 +59,15 @@ public partial class CommandPaletteViewModel : ObservableObject
         Prompt = $"[{pc}]\\{user} @ {dir} >";
     }
 
+    public void Reset()
+    {
+        Input = string.Empty;
+        OutputHistory.Clear();
+        CommandHistory.Clear();
+        _historyIndex = -1;
+        UpdatePrompt(_currentDirectory);
+    }
+
     [RelayCommand]
     public async Task ExecuteCommand()
     {
@@ -76,7 +86,18 @@ public partial class CommandPaletteViewModel : ObservableObject
             return;
         }
 
-        var parts = cmdText.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+        List<string> parts;
+
+        try
+        {
+            parts = TokenizeCommand(cmdText);
+        }
+        catch (InvalidOperationException ex)
+        {
+            OutputHistory.Add(new TerminalLine($"Error: {ex.Message}", Brushes.Red));
+            Input = string.Empty;
+            return;
+        }
         
         // Handle 'cp' specifically to support progress bar
         if (parts[0].ToLower() == "cp")
@@ -98,6 +119,47 @@ public partial class CommandPaletteViewModel : ObservableObject
 
         Input = string.Empty;
     }   
+
+    private static List<string> TokenizeCommand(string commandText)
+    {
+        List<string> parts = [];
+        StringBuilder current = new();
+        bool insideBackticks = false;
+
+        foreach (char ch in commandText)
+        {
+            if (ch == '`')
+            {
+                insideBackticks = !insideBackticks;
+                continue;
+            }
+
+            if (char.IsWhiteSpace(ch) && !insideBackticks)
+            {
+                if (current.Length > 0)
+                {
+                    parts.Add(current.ToString());
+                    current.Clear();
+                }
+
+                continue;
+            }
+
+            current.Append(ch);
+        }
+
+        if (insideBackticks)
+        {
+            throw new InvalidOperationException("Unmatched quote: missing closing `");
+        }
+
+        if (current.Length > 0)
+        {
+            parts.Add(current.ToString());
+        }
+
+        return parts;
+    }
     
     // TODO:
     // This command currently performs its own flag parsing.
