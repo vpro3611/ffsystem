@@ -599,4 +599,19 @@ public sealed class ParserTests : IDisposable
         Assert.True(result.Success);
         Assert.True(result.ShouldToggleHidden);
     }
+
+    [Fact]
+    public async Task OpenFile_WithRelativePath_ResolvesAgainstCurrentDirectory()
+    {
+        var fileName = "open-me.txt";
+        var filePath = At(fileName);
+        await File.WriteAllTextAsync(filePath, "open");
+
+        var result = await _parser.ExecuteAllParsed(["open", fileName], _tempDir);
+
+        Assert.True(result.Success);
+        Assert.True(result.ShouldOpenFile);
+        Assert.Equal(filePath, result.PathToOpen);
+        Assert.Equal($"Opening file: {filePath}", result.Message);
+    }
 }
