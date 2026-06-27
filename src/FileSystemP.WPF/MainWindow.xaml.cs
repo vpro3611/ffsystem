@@ -38,13 +38,12 @@ public partial class MainWindow : Window
         base.OnKeyDown(e);
         if (DataContext is MainWindowViewModel vm)
         {
-            // Detect F12
             if (e.Key == System.Windows.Input.Key.F12)
             {
-                vm.Palette.ToggleVisibilityCommand.Execute(null);
+                vm.ShowDetachedTerminalWindowCommand.Execute(null);
                 e.Handled = true;
             }
-            else if (e.Key == System.Windows.Input.Key.Escape && vm.Palette.IsVisible)
+            else if (e.Key == System.Windows.Input.Key.Escape && vm.Palette.IsVisible && !vm.IsTerminalDetached)
             {
                 vm.Palette.IsVisible = false;
                 e.Handled = true;

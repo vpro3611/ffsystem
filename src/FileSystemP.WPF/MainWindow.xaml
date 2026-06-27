@@ -196,9 +196,13 @@
                     <Style TargetType="RowDefinition">
                         <Setter Property="Height" Value="Auto"/>
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding Palette.IsVisible}" Value="True">
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding Palette.IsVisible}" Value="True"/>
+                                    <Condition Binding="{Binding IsTerminalDetached}" Value="False"/>
+                                </MultiDataTrigger.Conditions>
                                 <Setter Property="Height" Value="200"/>
-                            </DataTrigger>
+                            </MultiDataTrigger>
                         </Style.Triggers>
                     </Style>
                 </RowDefinition.Style>
@@ -252,7 +256,7 @@
                       VerticalAlignment="Center"
                       Margin="10,0"/>
             <Separator Width="1" Margin="4,6" Background="{DynamicResource AppMuted}"/>
-            <Button Content="Terminal" Command="{Binding Palette.ToggleVisibilityCommand}" Style="{StaticResource ToolbarButton}" Padding="10,4" FontSize="12" ToolTip="Toggle Terminal (F12)"/>
+            <Button Content="Terminal" Command="{Binding ShowDetachedTerminalWindowCommand}" Style="{StaticResource ToolbarButton}" Padding="10,4" FontSize="12" ToolTip="Open Terminal (F12)"/>
         </StackPanel>
 
         <!-- Main Content -->
@@ -568,10 +572,38 @@
         </Grid>
 
         <!-- Terminal -->
-        <GridSplitter Grid.Row="3" Height="4" HorizontalAlignment="Stretch" Background="{DynamicResource AppSurface}"
-                      Visibility="{Binding Palette.IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        <GridSplitter Grid.Row="3" Height="4" HorizontalAlignment="Stretch" Background="{DynamicResource AppSurface}">
+            <GridSplitter.Style>
+                <Style TargetType="GridSplitter">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Palette.IsVisible}" Value="True"/>
+                                <Condition Binding="{Binding IsTerminalDetached}" Value="False"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </MultiDataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </GridSplitter.Style>
+        </GridSplitter>
         <localViews:CommandPaletteView Grid.Row="3" 
-                                       DataContext="{Binding Palette}"
-                                       Visibility="{Binding Palette.IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                       DataContext="{Binding Palette}">
+            <localViews:CommandPaletteView.Style>
+                <Style TargetType="localViews:CommandPaletteView">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Palette.IsVisible}" Value="True"/>
+                                <Condition Binding="{Binding IsTerminalDetached}" Value="False"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </MultiDataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </localViews:CommandPaletteView.Style>
+        </localViews:CommandPaletteView>
     </Grid>
 </Window>
