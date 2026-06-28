@@ -19,6 +19,7 @@ The window is divided into three main areas:
 - the breadcrumb and toolbar area at the top
 - the left sidebar for the explorer tree and search panel
 - the right content area showing files and folders in the current location
+- an embedded terminal area at the bottom when the terminal is visible and not detached
 
 ## Navigation
 
@@ -60,6 +61,47 @@ The content panel supports context-menu operations on files and folders.
 - Double-clicking a folder navigates into it.
 - Double-clicking a file opens it through the Windows shell.
 - Copy and paste support both files and folders. For folders, the copy is recursive and includes all subfolders and files.
+
+## Terminal
+
+FileSystemP includes a built-in command terminal for file-system operations, navigation helpers, search helpers, and quick inspection tasks.
+
+### Opening the terminal
+
+- Use the `Terminal` toolbar button to open the terminal in a dedicated window.
+- Press `F12` to open or focus the detached terminal window.
+- When the detached terminal window is open, the embedded terminal host is hidden.
+- Closing the detached terminal window restores the embedded terminal in the main window and clears the prior terminal session.
+
+### Supported command groups
+
+The terminal supports commands for:
+
+- file operations: `rename`, `del`, `mkdir`, `mkfile`, `mkfilewith`, `cp`
+- navigation and view actions: `cd`, `back`, `forward`, `home`, `search`, `hidden`, `undo`
+- inspection: `ls`, `rfilecont`, `prop`, `open`, `find`
+- help and discovery: `help`, `helpflags`, `explain`, `explainall`
+
+### Grouped arguments
+
+Arguments wrapped in backticks are treated as a single argument position.
+
+Examples:
+
+```text
+mkfilewith new.txt `content new new new`
+cp report.txt `D:\My Folder\Backup Copy` -o
+open `C:\My Folder\notes.txt`
+```
+
+If the closing backtick is missing, the terminal shows a friendly input error instead of sending the command to the backend parser.
+
+### Terminal-specific notes
+
+- `clear` clears the terminal history view.
+- `cp` shows progress output in the terminal while the copy is running.
+- Commands such as `back`, `forward`, `search`, `hidden`, `undo`, `open`, and `prop` can and will trigger UI actions instead of only printing text. This is to keep terminal envirnoments consistent with the main window's UI.
+- `help` lists available commands, while `explain` and `helpflags` provide more specific details.
 
 ## Search
 
