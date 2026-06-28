@@ -236,14 +236,15 @@ public class FileDirectorySystemServiceTests : IDisposable
     }
 
     [Fact]
-    public void Delete_ThrowsAppExceptionWhenDeletingNonEmptyDirectoryNonRecursively()
+    public void Delete_NonEmptyDirectory_RemovesDirectoryEvenWhenRecursiveIsFalse()
     {
         var dir = At("dir");
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, "file.txt"), "");
 
-        Assert.Throws<AppException>(() =>
-            FileDirectorySystemService.Delete(dir, recursive: false));
+        FileDirectorySystemService.Delete(dir, recursive: false);
+
+        Assert.False(Directory.Exists(dir));
     }
 
     // --- ReadFileContent ---

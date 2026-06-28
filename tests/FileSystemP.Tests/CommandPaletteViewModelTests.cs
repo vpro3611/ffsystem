@@ -51,7 +51,7 @@ public class CommandPaletteViewModelTests
             var resultLine = vm.OutputHistory.Last();
             Assert.Contains(fileName, resultLine.Text);
             Assert.Contains(filePath, resultLine.Text);
-            Assert.Contains($"({fileSize} bytes)", resultLine.Text);
+            Assert.Contains($"({fileSize} B)", resultLine.Text);
             Assert.Contains("[1]", resultLine.Text);
         }
         finally
