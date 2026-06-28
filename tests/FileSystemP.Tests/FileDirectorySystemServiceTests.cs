@@ -266,4 +266,36 @@ public class FileDirectorySystemServiceTests : IDisposable
         await Assert.ThrowsAsync<AppException>(() =>
             FileDirectorySystemService.ReadFileContent(At("missing.txt")));
     }
+
+    // --- Directory Copy ---
+
+    [Fact]
+    public void Copy_Directory_CopiesRecursively()
+    {
+        var src = At("srcDir");
+        var dst = At("dstDir");
+        Directory.CreateDirectory(src);
+        File.WriteAllText(Path.Combine(src, "file1.txt"), "data1");
+        var sub = Directory.CreateDirectory(Path.Combine(src, "sub"));
+        File.WriteAllText(Path.Combine(sub.FullName, "file2.txt"), "data2");
+
+        FileDirectorySystemService.Copy(src, dst);
+
+        Assert.True(Directory.Exists(dst));
+        Assert.Equal("data1", File.ReadAllText(Path.Combine(dst, "file1.txt")));
+        Assert.True(Directory.Exists(Path.Combine(dst, "sub")));
+        Assert.Equal("data2", File.ReadAllText(Path.Combine(dst, "sub", "file2.txt")));
+    }
+
+    [Fact]
+    public void Copy_Directory_ThrowsAppExceptionOnInfiniteRecursion()
+    {
+        var src = At("outer");
+        var dst = Path.Combine(src, "inner");
+        Directory.CreateDirectory(src);
+
+        var ex = Assert.Throws<AppException>(() =>
+            FileDirectorySystemService.Copy(src, dst));
+        Assert.Contains("infinite recursion", ex.Message.ToLower());
+    }
 }

@@ -32,4 +32,22 @@ public partial class MainWindow : Window
         if (dep is ListViewItem item)
             FileList.SelectedItem = item.DataContext;
     }
+
+    protected override void OnKeyDown(System.Windows.Input.KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (DataContext is MainWindowViewModel vm)
+        {
+            if (e.Key == System.Windows.Input.Key.F12)
+            {
+                vm.ShowDetachedTerminalWindowCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (e.Key == System.Windows.Input.Key.Escape && vm.Palette.IsVisible && !vm.IsTerminalDetached)
+            {
+                vm.Palette.IsVisible = false;
+                e.Handled = true;
+            }
+        }
+    }
 }

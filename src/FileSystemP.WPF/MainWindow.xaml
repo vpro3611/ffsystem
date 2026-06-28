@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:FileSystemP.Core.SearchService.Options;assembly=FileSystemP.Core"
+        xmlns:localViews="clr-namespace:FileSystemP.WPF.Views"
         Title="FileSystemP" Height="600" Width="900"
         Background="{DynamicResource AppBackground}">
     <Window.Resources>
@@ -28,46 +29,6 @@
             <Separator/>
             <MenuItem Header="Properties" Command="{Binding PlacementTarget.Tag.Panel.ShowPropertiesCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
         </ContextMenu>
-
-        <ContextMenu x:Key="TreeFolderMenu">
-            <MenuItem Header="Properties"
-                      Command="{Binding PlacementTarget.Tag.ShowTreeNodePropertiesCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-        </ContextMenu>
-
-        <Style x:Key="ToolbarButton" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppForeground}"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Style.Triggers>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Opacity" Value="0.45"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="BreadcrumbButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppForeground}"/>
-            <Setter Property="Padding" Value="4,2"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource AppMuted}"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
 
         <Style x:Key="SidebarComboBoxStyle" TargetType="ComboBox">
             <Setter Property="Background" Value="{DynamicResource AppBackground}"/>
@@ -162,12 +123,16 @@
             </Setter>
         </Style>
 
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-
         <x:Array x:Key="SearchTargetTypes" Type="local:SearchTargetType">
             <local:SearchTargetType>Both</local:SearchTargetType>
             <local:SearchTargetType>Files</local:SearchTargetType>
             <local:SearchTargetType>Directories</local:SearchTargetType>
+        </x:Array>
+
+        <x:Array x:Key="SearchNameModes" Type="local:NameSearchMode">
+            <local:NameSearchMode>Contains</local:NameSearchMode>
+            <local:NameSearchMode>Exact</local:NameSearchMode>
+            <local:NameSearchMode>Pattern</local:NameSearchMode>
         </x:Array>
 
         <ContextMenu x:Key="EmptySpaceMenu">
@@ -177,6 +142,48 @@
             <MenuItem Header="New File with Content" Command="{Binding PlacementTarget.DataContext.Panel.NewFileWithContentCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <MenuItem Header="New Folder" Command="{Binding PlacementTarget.DataContext.Panel.NewFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
         </ContextMenu>
+
+        <ContextMenu x:Key="TreeFolderMenu">
+            <MenuItem Header="Properties"
+                      Command="{Binding PlacementTarget.Tag.ShowTreeNodePropertiesCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+        </ContextMenu>
+
+        <Style x:Key="ToolbarButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppForeground}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.45"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="BreadcrumbButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppForeground}"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppMuted}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </Window.Resources>
 
     <Grid>
@@ -184,8 +191,25 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto">
+                <RowDefinition.Style>
+                    <Style TargetType="RowDefinition">
+                        <Setter Property="Height" Value="Auto"/>
+                        <Style.Triggers>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding Palette.IsVisible}" Value="True"/>
+                                    <Condition Binding="{Binding IsTerminalDetached}" Value="False"/>
+                                </MultiDataTrigger.Conditions>
+                                <Setter Property="Height" Value="200"/>
+                            </MultiDataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </RowDefinition.Style>
+            </RowDefinition>
         </Grid.RowDefinitions>
 
+        <!-- Breadcrumbs -->
         <ItemsControl Grid.Row="0"
                       ItemsSource="{Binding PathSegments}"
                       Background="{DynamicResource AppSurface}"
@@ -217,6 +241,7 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
+        <!-- Toolbar -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Background="{DynamicResource AppSurface}" Height="34">
             <Button Content="←" Command="{Binding NavigateBackCommand}" Style="{StaticResource ToolbarButton}" Padding="10,4" FontSize="14" ToolTip="Back"/>
             <Button Content="→" Command="{Binding NavigateForwardCommand}" Style="{StaticResource ToolbarButton}" Padding="10,4" FontSize="14" ToolTip="Forward"/>
@@ -224,8 +249,17 @@
             <Button Content="↩ Undo" Command="{Binding Panel.UndoCommand}" Style="{StaticResource ToolbarButton}" Padding="10,4" FontSize="12" ToolTip="Undo last action"/>
             <Separator Width="1" Margin="4,6" Background="{DynamicResource AppMuted}"/>
             <Button Content="Search" Command="{Binding ShowSearchMenuCommand}" Style="{StaticResource ToolbarButton}" Padding="10,4" FontSize="12" ToolTip="Open search menu"/>
+            <Separator Width="1" Margin="4,6" Background="{DynamicResource AppMuted}"/>
+            <CheckBox Content="Show Hidden" 
+                      IsChecked="{Binding Panel.ShowHiddenFiles}"
+                      Foreground="{DynamicResource AppForeground}"
+                      VerticalAlignment="Center"
+                      Margin="10,0"/>
+            <Separator Width="1" Margin="4,6" Background="{DynamicResource AppMuted}"/>
+            <Button Content="Terminal" Command="{Binding ShowDetachedTerminalWindowCommand}" Style="{StaticResource ToolbarButton}" Padding="10,4" FontSize="12" ToolTip="Open Terminal (F12)"/>
         </StackPanel>
 
+        <!-- Main Content -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="320" MinWidth="220"/>
@@ -233,6 +267,7 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
+            <!-- Explorer Sidebar -->
             <Border Grid.Column="0" Background="{DynamicResource AppSurface}">
                 <TabControl SelectedIndex="{Binding SelectedSidebarSectionIndex}"
                             Background="{DynamicResource AppSurface}"
@@ -277,6 +312,12 @@
                                          Foreground="{DynamicResource AppForeground}"
                                          Background="{DynamicResource AppBackground}"
                                          BorderBrush="{DynamicResource AppMuted}"/>
+
+                                <TextBlock Text="Name Match Mode" Foreground="{DynamicResource AppMuted}"/>
+                                <ComboBox SelectedItem="{Binding Search.NameMode}"
+                                          ItemsSource="{Binding Source={StaticResource SearchNameModes}}"
+                                          Style="{StaticResource SidebarComboBoxStyle}"
+                                          Margin="0,4,0,10"/>
 
                                 <TextBlock Text="Target Type" Foreground="{DynamicResource AppMuted}"/>
                                 <ComboBox SelectedItem="{Binding Search.TargetType}"
@@ -443,6 +484,7 @@
 
             <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="{DynamicResource AppSurface}"/>
 
+            <!-- File List Panel -->
             <Grid Grid.Column="2" Background="{DynamicResource AppBackground}">
                 <ListView x:Name="FileList"
                           ItemsSource="{Binding Panel.Entries}"
@@ -471,34 +513,6 @@
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem">
                             <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListView}}"/>
-                            <Setter Property="Foreground" Value="{DynamicResource AppForeground}"/>
-                            <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ListViewItem">
-                                        <Border x:Name="Bd" Background="{TemplateBinding Background}" Padding="2,2" SnapsToDevicePixels="True">
-                                            <GridViewRowPresenter Content="{TemplateBinding Content}"
-                                                                  Columns="{TemplateBinding GridView.ColumnCollection}"/>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AppHover}"/>
-                                            </Trigger>
-                                            <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AppSelection}"/>
-                                                <Setter Property="Foreground" Value="{DynamicResource AppSelectionText}"/>
-                                            </Trigger>
-                                            <MultiTrigger>
-                                                <MultiTrigger.Conditions>
-                                                    <Condition Property="IsSelected" Value="True"/>
-                                                    <Condition Property="IsKeyboardFocusWithin" Value="False"/>
-                                                </MultiTrigger.Conditions>
-                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AppSelectionInactive}"/>
-                                            </MultiTrigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsDirectory}" Value="True">
                                     <Setter Property="ContextMenu" Value="{StaticResource FolderMenu}"/>
@@ -511,9 +525,9 @@
                     </ListView.ItemContainerStyle>
                 </ListView>
 
+                <!-- Empty state overlay -->
                 <TextBlock Text="This folder is empty"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
                            Foreground="{DynamicResource AppMuted}"
                            FontSize="14">
                     <TextBlock.Style>
@@ -528,13 +542,11 @@
                     </TextBlock.Style>
                 </TextBlock>
 
+                <!-- Error state overlay -->
                 <TextBlock Text="{Binding Panel.ErrorMessage}"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
                            Foreground="{DynamicResource AppMuted}"
-                           FontSize="13"
-                           TextWrapping="Wrap"
-                           MaxWidth="400">
+                           FontSize="13" TextWrapping="Wrap" MaxWidth="400">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Setter Property="Visibility" Value="Visible"/>
@@ -547,6 +559,51 @@
                     </TextBlock.Style>
                 </TextBlock>
             </Grid>
+
+            <StatusBar Grid.Row="1" Grid.ColumnSpan="3" Background="{DynamicResource AppSurface}" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource AppMuted}"
+                       Visibility="{Binding Panel.IsCopying, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StatusBarItem>
+                    <ProgressBar Width="200" Height="14" Minimum="0" Maximum="1" Value="{Binding Panel.CopyProgress}"/>
+                </StatusBarItem>
+                <StatusBarItem>
+                    <TextBlock Text="Copying files..." Foreground="{DynamicResource AppForeground}" FontSize="12" Margin="5,0,0,0"/>
+                </StatusBarItem>
+            </StatusBar>
         </Grid>
+
+        <!-- Terminal -->
+        <GridSplitter Grid.Row="3" Height="4" HorizontalAlignment="Stretch" Background="{DynamicResource AppSurface}">
+            <GridSplitter.Style>
+                <Style TargetType="GridSplitter">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Palette.IsVisible}" Value="True"/>
+                                <Condition Binding="{Binding IsTerminalDetached}" Value="False"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </MultiDataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </GridSplitter.Style>
+        </GridSplitter>
+        <localViews:CommandPaletteView Grid.Row="3" 
+                                       DataContext="{Binding Palette}">
+            <localViews:CommandPaletteView.Style>
+                <Style TargetType="localViews:CommandPaletteView">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Palette.IsVisible}" Value="True"/>
+                                <Condition Binding="{Binding IsTerminalDetached}" Value="False"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </MultiDataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </localViews:CommandPaletteView.Style>
+        </localViews:CommandPaletteView>
     </Grid>
 </Window>

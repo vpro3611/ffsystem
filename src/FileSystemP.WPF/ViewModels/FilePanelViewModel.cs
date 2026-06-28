@@ -17,9 +17,10 @@ namespace FileSystemP.WPF.ViewModels;
 public partial class FilePanelViewModel : ObservableObject
 {
     private readonly Action<string> _navigate;
+    private readonly Action<string> _openFile;
     private readonly INtfsMetadataProvider _metadataProvider;
+    private readonly IUndoService _undoService;
     private string _currentPath = string.Empty;
-    private readonly Stack<IUndoAction> _undoStack = new();
 
     [ObservableProperty]
     private ObservableCollection<FileEntry> _entries = new();
@@ -36,15 +37,32 @@ public partial class FilePanelViewModel : ObservableObject
     [ObservableProperty]
     private string? _clipboardPath;
 
+    [ObservableProperty]
+    private bool _isCopying;
+
+    [ObservableProperty]
+    private double _copyProgress;
+
+    [ObservableProperty]
+    private bool _showHiddenFiles;
+
+    partial void OnShowHiddenFilesChanged(bool value)
+    {
+        _ = LoadEntries(_currentPath);
+    }
+
     partial void OnClipboardPathChanged(string? value)
     {
         PasteCommand.NotifyCanExecuteChanged();
     }
 
-    public FilePanelViewModel(Action<string> navigate, INtfsMetadataProvider metadataProvider)
+    public FilePanelViewModel(Action<string> navigate, INtfsMetadataProvider metadataProvider, IUndoService undoService, Action<string>? openFile = null)
     {
         _navigate = navigate;
+        _openFile = openFile ?? OpenFileWithShell;
         _metadataProvider = metadataProvider;
+        _undoService = undoService;
+        _undoService.CanUndoChanged += (s, e) => UndoCommand.NotifyCanExecuteChanged();
     }
 
     public async Task LoadEntries(string path)
@@ -55,6 +73,7 @@ public partial class FilePanelViewModel : ObservableObject
         {
             var entries = await Task.Run(() =>
                 FileDirectorySystemService.GetEntries(path)
+                    .Where(e => ShowHiddenFiles || !e.Attributes.HasFlag(FileAttributes.Hidden))
                     .Select(MapToEntry)
                     .ToList());
             Entries.Clear();
@@ -74,25 +93,34 @@ public partial class FilePanelViewModel : ObservableObject
     {
         if (SelectedEntry is null) return;
 
-        if (SelectedEntry.IsDirectory)
+        OpenPath(SelectedEntry.FilePath);
+    }
+
+    public void OpenPath(string path)
+    {
+        if (Directory.Exists(path))
         {
-            _navigate(SelectedEntry.FilePath);
+            _navigate(path);
+            return;
         }
-        else
+
+        try
         {
-            try
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = SelectedEntry.FilePath,
-                    UseShellExecute = true
-                })?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            _openFile(path);
         }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private static void OpenFileWithShell(string path)
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = path,
+            UseShellExecute = true
+        })?.Dispose();
     }
 
     [RelayCommand]
@@ -134,15 +162,14 @@ public partial class FilePanelViewModel : ObservableObject
         var newName = InputDialog.Show("Enter new name:", SelectedEntry.Name);
         if (string.IsNullOrWhiteSpace(newName)) return;
 
-        var oldName = SelectedEntry.Name;
-        var parent = System.IO.Path.GetDirectoryName(SelectedEntry.FilePath)!;
+        var oldPath = SelectedEntry.FilePath;
+        var parent = System.IO.Path.GetDirectoryName(oldPath)!;
 
         try
         {
-            FileDirectorySystemService.Rename(SelectedEntry.FilePath, newName);
+            FileDirectorySystemService.Rename(oldPath, newName);
             var newFullPath = System.IO.Path.Combine(parent, newName);
-            _undoStack.Push(new UndoRename(newFullPath, oldName));
-            UndoCommand.NotifyCanExecuteChanged();
+            _undoService.Push(new UndoRenameAction(newFullPath, oldPath));
             await LoadEntries(_currentPath);
         }
         catch (Exception ex)
@@ -159,9 +186,11 @@ public partial class FilePanelViewModel : ObservableObject
         if (MessageBox.Show($"Delete '{SelectedEntry.Name}'?", "Confirm", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
             return;
 
+        string path = SelectedEntry.FilePath;
         try
         {
-            FileDirectorySystemService.Delete(SelectedEntry.FilePath);
+            FileDirectorySystemService.Delete(path);
+            _undoService.Push(new UndoDeleteAction(path));
             await LoadEntries(_currentPath);
         }
         catch (Exception ex)
@@ -186,23 +215,34 @@ public partial class FilePanelViewModel : ObservableObject
             MessageBox.Show("Navigate to a destination folder first.", "No folder selected", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        if (Directory.Exists(ClipboardPath))
+
+        var destination = Path.Combine(_currentPath, Path.GetFileName(ClipboardPath));
+
+        // Check if destination already exists (UI Policy)
+        if (File.Exists(destination) || Directory.Exists(destination))
         {
-            MessageBox.Show("Copying folders is not supported.", "Unsupported", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show($"The destination '{Path.GetFileName(ClipboardPath)}' already exists.", "Conflict", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        var destination = Path.Combine(_currentPath, Path.GetFileName(ClipboardPath));
         try
         {
-            FileDirectorySystemService.Copy(ClipboardPath, destination);
-            _undoStack.Push(new UndoPaste(destination));
-            UndoCommand.NotifyCanExecuteChanged();
+            IsCopying = true;
+            CopyProgress = 0;
+            var progress = new Progress<double>(p => CopyProgress = p);
+
+            await Task.Run(() => FileSystemP.Core.Services.FileDirectorySystemService.Copy(ClipboardPath, destination, overwrite: false, progress));
+            
+            _undoService.Push(new UndoCreateAction(destination));
             await LoadEntries(_currentPath);
         }
         catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsCopying = false;
         }
     }
 
@@ -218,8 +258,7 @@ public partial class FilePanelViewModel : ObservableObject
         try
         {
             FileDirectorySystemService.CreateFile(path);
-            _undoStack.Push(new UndoCreate(path));
-            UndoCommand.NotifyCanExecuteChanged();
+            _undoService.Push(new UndoCreateAction(path));
             await LoadEntries(_currentPath);
         }
         catch (Exception ex)
@@ -238,8 +277,7 @@ public partial class FilePanelViewModel : ObservableObject
         try
         {
             FileDirectorySystemService.CreateDirectory(path);
-            _undoStack.Push(new UndoCreate(path));
-            UndoCommand.NotifyCanExecuteChanged();
+            _undoService.Push(new UndoCreateAction(path));
             await LoadEntries(_currentPath);
         }
         catch (Exception ex)
@@ -251,21 +289,19 @@ public partial class FilePanelViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private async Task Undo()
     {
-        if (_undoStack.Count == 0) return;
-        var action = _undoStack.Pop();
+        if (!_undoService.CanUndo) return;
         try
         {
-            action.Execute();
+            _undoService.Undo();
             await LoadEntries(_currentPath);
         }
         catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "Undo failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
-        UndoCommand.NotifyCanExecuteChanged();
     }
 
-    private bool CanUndo() => _undoStack.Count > 0;
+    private bool CanUndo() => _undoService.CanUndo;
 
     [RelayCommand]
     private async Task NewFileWithContent()
@@ -276,8 +312,7 @@ public partial class FilePanelViewModel : ObservableObject
         try
         {
             await FileDirectorySystemService.CreateFileWithContent(fullPath, result.Value.content);
-            _undoStack.Push(new UndoCreate(fullPath));
-            UndoCommand.NotifyCanExecuteChanged();
+            _undoService.Push(new UndoCreateAction(fullPath));
             await LoadEntries(_currentPath);
         }
         catch (Exception ex)
@@ -318,21 +353,4 @@ public partial class FilePanelViewModel : ObservableObject
         if (bytes < 1024 * 1024 * 1024) return $"{bytes / (1024.0 * 1024):F1} MB";
         return $"{bytes / (1024.0 * 1024 * 1024):F1} GB";
     }
-}
-
-internal interface IUndoAction { void Execute(); }
-
-internal record UndoRename(string NewPath, string OriginalName) : IUndoAction
-{
-    public void Execute() => FileDirectorySystemService.Rename(NewPath, OriginalName);
-}
-
-internal record UndoCreate(string Path) : IUndoAction
-{
-    public void Execute() => FileDirectorySystemService.Delete(Path);
-}
-
-internal record UndoPaste(string DestPath) : IUndoAction
-{
-    public void Execute() => FileDirectorySystemService.Delete(DestPath);
 }

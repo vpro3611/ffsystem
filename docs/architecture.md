@@ -19,6 +19,9 @@ flowchart TD
     MainVM --> TreeVM["FileTreeViewModel"]
     MainVM --> PanelVM["FilePanelViewModel"]
     MainVM --> SearchVM["SearchViewModel"]
+    MainVM --> TerminalVM["CommandPaletteViewModel"]
+    Main --> TerminalWindow["TerminalWindow"]
+    TerminalWindow --> TerminalVM
     PanelVM --> PropsWindow["PropertiesWindow"]
     PropsWindow --> PropsVM["PropertiesViewModel"]
     PropsVM --> SecurityVM["SecurityTabViewModel"]
@@ -47,6 +50,7 @@ flowchart TD
 - an explorer sidebar with a drive-based tree
 - a search sidebar with advanced filters
 - a list-based content panel for the current folder
+- an embedded terminal host that can be swapped out for a detached terminal window
 
 ### View-model responsibilities
 
@@ -57,10 +61,21 @@ flowchart TD
 | `FileTreeNode` | Lazily expands subdirectories when a tree node is opened |
 | `FilePanelViewModel` | Loads folder contents and performs rename, delete, create, copy, paste, undo, and properties actions |
 | `SearchViewModel` | Builds advanced search criteria, runs cancellable search, and projects results into the file panel |
+| `CommandPaletteViewModel` | Tokenizes terminal input, invokes command parsing, and maps `CommandResult` responses into UI actions |
 | `PropertiesViewModel` | Aggregates NTFS metadata, shell metadata, editable attributes, and security state |
 | `SecurityTabViewModel` | Adapts security metadata into a compact UI view |
 | `PermissionEditorViewModel` | Builds ACL change transactions from user edits |
 | `AdvancedAttributesViewModel` | Manages advanced attribute changes before they are committed |
+
+### Terminal interaction layer
+
+The terminal experience is built as a shared view-model plus two possible hosts:
+
+- `CommandPaletteView` is the reusable terminal UI surface.
+- `MainWindow.xaml` contains the embedded host.
+- `TerminalWindow` hosts the same terminal UI in a detached window.
+
+`MainWindowViewModel` controls whether the terminal is embedded or detached. Closing the detached window resets the terminal session and restores the embedded host.
 
 ## Core Layer
 
@@ -82,8 +97,27 @@ The core library is organized by behavior rather than by UI feature:
 - delete files and directories
 - create files and directories
 - create files with initial content
-- copy files
+- copy files and directories (recursive)
 - read file bytes
+
+`UndoService` tracks undoable file-system actions such as rename, create, delete, and selected copy flows so both toolbar and terminal commands can revert recent operations.
+
+### Command subsystem
+
+The command subsystem lives in `FileSystemP.Core/CommandService` and is composed around:
+
+- `Parser`
+- `AvailableCommands`
+- `CommandResult`
+- command payload records such as file content, file lines, and `cd` results
+
+The parser is intentionally UI-agnostic. It receives a `List<string>` plus the current directory and returns a structured `CommandResult` that the WPF layer interprets. This keeps command validation and command-side business rules in the core project rather than in the view model.
+
+Supported command areas currently include:
+
+- file-system mutation: `rename`, `del`, `mkdir`, `mkfile`, `mkfilewith`, `cp`
+- navigation and window actions: `cd`, `back`, `forward`, `home`, `search`, `hidden`, `open`, `prop`, `undo`
+- discovery and help: `help`, `helpflags`, `explain`, `explainall`, `ls`, `find`, `rfilecont`
 
 `DriveService` returns ready drives and allows lookup by drive name.
 
@@ -151,6 +185,8 @@ flowchart TD
 
 The codebase uses a project-specific `AppException` to wrap many lower-level failures and preserve the originating service or method name. In the UI layer, most operation failures are surfaced to the user through dialogs or inline error messages rather than terminating the application.
 
+Terminal tokenization errors, such as an unmatched backtick in a grouped argument, are handled in the WPF layer before a command is sent to the core parser. That keeps user-facing input errors separate from core command semantics.
+
 ## Testing Strategy
 
 The test suite focuses on:
@@ -158,16 +194,17 @@ The test suite focuses on:
 - file-system service behavior
 - attribute semantics
 - search filtering
+- command parser behavior and command payload semantics
 - NTFS metadata extraction
 - shell metadata access
 - ACL metadata and mutation behavior
-- selected view-model behavior around properties and permission editing
+- selected view-model behavior around properties, permission editing, terminal commands, and detached-terminal state
 
 Platform-dependent areas, especially compression and Windows ACL behavior, are guarded by environment-sensitive tests or assumptions.
 
 ## Known Boundaries
 
-- The current copy/paste workflow supports files, not folders.
-- Search is implemented as in-memory result accumulation, which is simple and clear but not optimized for very large result sets.
+- Search is implemented as in-memory result accumulation
+, which is simple and clear but not optimized for very large result sets.
 - Directory size calculation in `NtfsMetadataProvider` walks all descendant files recursively.
 - Security editing is tightly coupled to Windows ACL semantics.

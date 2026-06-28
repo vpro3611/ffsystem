@@ -7,6 +7,8 @@ FileSystemP is a Windows desktop file explorer and file-system inspection tool b
 - Drive-based explorer with folder tree and content panel
 - Breadcrumb navigation with back and forward history
 - Context-menu file operations for rename, delete, create, copy, paste, and undo
+- Built-in terminal command palette with file-system and navigation commands
+- Detached terminal window that can be opened from the toolbar or with `F12`
 - Advanced search across names, extensions, attributes, size, and timestamps
 - Properties dialog with general, details, and security tabs
 - Editable NTFS-oriented attributes including read-only, hidden, archive, indexing, and compression
@@ -27,6 +29,7 @@ FileSystemP is a Windows desktop file explorer and file-system inspection tool b
 flowchart LR
     UI["WPF Views"] --> VM["ViewModels"]
     VM --> Core["FileSystemP.Core"]
+    VM --> Commands["Command Parser / Undo"]
     Core --> FS["System.IO / NTFS / ACL APIs"]
     Core --> Shell["Windows Shell Property APIs"]
     Tests["xUnit Tests"] --> Core
@@ -51,6 +54,22 @@ sequenceDiagram
     User->>Panel: Open Properties
     Panel->>Props: Build view model from metadata
     Props->>Core: Apply file-system changes when saved
+```
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Terminal as CommandPaletteViewModel
+    participant Parser as Parser
+    participant Main as MainWindowViewModel
+    participant Panel as FilePanelViewModel
+
+    User->>Terminal: Enter command
+    Terminal->>Terminal: Tokenize input and grouped args
+    Terminal->>Parser: ExecuteAllParsed(parts, currentDirectory)
+    Parser-->>Terminal: CommandResult
+    Terminal->>Main: Apply navigation/search/history actions
+    Terminal->>Panel: Open file or run undo when requested
 ```
 
 ## Requirements
@@ -91,6 +110,12 @@ dotnet test .\tests\FileSystemP.Tests\FileSystemP.Tests.csproj
 - Compression support is explicitly limited to Windows NTFS volumes.
 - Shell metadata depends on Windows shell property APIs.
 - Security editing is based on Windows access control lists and Windows identities.
+- Terminal grouped arguments use backticks, for example:
+
+```text
+mkfilewith notes.txt `hello world`
+open `C:\My Folder\file.txt`
+```
 
 ## License
 
