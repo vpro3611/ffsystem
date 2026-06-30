@@ -8,10 +8,12 @@ namespace FileSystemP.Core.CommandService;
 public class Parser : IParser
 {
     private readonly IUndoService? _undoService;
+    private readonly IKeyBindingSettingsService _keyBindingSettingsService;
 
-    public Parser(IUndoService? undoService = null)
+    public Parser(IUndoService? undoService = null, IKeyBindingSettingsService? keyBindingSettingsService = null)
     {
         _undoService = undoService;
+        _keyBindingSettingsService = keyBindingSettingsService ?? new KeyBindingSettingsService();
     }
 
     private static readonly Dictionary<string, AvailableCommands> CommandMap = new()
@@ -39,7 +41,10 @@ public class Parser : IParser
         ["search"] = AvailableCommands.Search,
         ["hidden"] = AvailableCommands.Hidden,
         ["find"] = AvailableCommands.Find,
-        ["open"] = AvailableCommands.OpenFile
+        ["open"] = AvailableCommands.OpenFile,
+        ["set"] = AvailableCommands.SetBind,
+        ["binds"] = AvailableCommands.ListBinds,
+        ["resetbinds"] = AvailableCommands.ResetBinds,
     };
 
     private static readonly Dictionary<string, FlagsForCommands> FlagMap = new()
@@ -68,6 +73,8 @@ public class Parser : IParser
         ["--exact"] = FlagsForCommands.FindExact,
         ["-p"] = FlagsForCommands.FindPattern,
         ["--pattern"] = FlagsForCommands.FindPattern,
+        ["-ob"] = FlagsForCommands.OverwriteBind,
+        ["--overbind"] = FlagsForCommands.OverwriteBind,
     };
 
     private static readonly Dictionary<AvailableCommands, List<FlagsForCommands>> CommandFlagsMap = new()
@@ -116,6 +123,11 @@ public class Parser : IParser
             FlagsForCommands.FindPattern
         ],
         [AvailableCommands.OpenFile] = [],
+        [AvailableCommands.SetBind] = [
+            FlagsForCommands.OverwriteBind
+        ],
+        [AvailableCommands.ListBinds] = [],
+        [AvailableCommands.ResetBinds] = []
     };
 
 
@@ -146,6 +158,9 @@ public class Parser : IParser
         ["hidden"] = "Toggles whether hidden files and directories are displayed in directory listings and navigation views. When enabled, hidden items are shown; when disabled, hidden items are concealed. Flags: none. Example: hidden",
         ["find"] = "Finds files and directories corresponding to a provided name or pattern. Flags: -e/--exact (exact match), -p/--pattern (glob pattern). Example: find *.txt -p",
         ["open"] = "Opens a file with the default application associated with its file type. Usage: open <path>. Flags: none. Example: open C:\\Temp\\notes.txt",
+        ["set"] = "Sets a keyboard binding for a supported application action and stores it in the settings file. Usage: set <action> <binding> [flag]. Use -ob/--overbind to take a binding away from another action. Example: set undo Ctrl+Z",
+        ["binds"] = "Lists the current keyboard bindings loaded from the settings file. Usage: binds. Flags: none. Example: binds",
+        ["resetbinds"] = "Restores all keyboard bindings to the default set and writes them to the settings file. Usage: resetbinds. Flags: none. Example: resetbinds",
         ["-o"] = "Overwrite flag. Used with: cp. Effect: allows the destination file to be replaced if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt -o",
         ["--overwrite"] = "Overwrite flag. Used with: cp. Effect: allows the destination file to be replaced if it already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt --overwrite",
         ["-r"] = "Recursive flag. Used with: del. Effect: allows deleting a directory together with all nested files and subdirectories. Example: del C:\\Temp\\Logs -r",
@@ -170,11 +185,13 @@ public class Parser : IParser
         ["--exact"] = "Exact match flag. Used with find. Effect: finds items with the exact name provided (case-insensitive). Example: find MyFile.txt --exact",
         ["-p"] = "Pattern match flag. Used with find. Effect: finds items matching a glob pattern (e.g., *.txt). Example: find *.txt -p",
         ["--pattern"] = "Pattern match flag. Used with find. Effect: finds items matching a glob pattern (e.g., *.txt). Example: find *.txt --pattern",
+        ["-ob"] = "Overwrite-bind flag. Used with: set. Effect: reassigns an already used key binding to the requested action and clears it from the previously assigned action. Example: set search Ctrl+F -ob",
+        ["--overbind"] = "Overwrite-bind flag. Used with: set. Effect: reassigns an already used key binding to the requested action and clears it from the previously assigned action. Example: set search Ctrl+F --overbind",
     };
 
-    public static Parser CreateParser(IUndoService? undoService = null)
+    public static Parser CreateParser(IUndoService? undoService = null, IKeyBindingSettingsService? keyBindingSettingsService = null)
     {
-        return new Parser(undoService);
+        return new Parser(undoService, keyBindingSettingsService);
     }
 
     private FlagsForCommands ValidateFlag(string potentialFlag, string nameOfCurrentCommand)
@@ -271,6 +288,12 @@ public class Parser : IParser
                 return noCommandArray.Count == 1 || noCommandArray.Count == 2; // [find] name --flag (2) OR [find] name (1), so should contain 1 OR 2 elements without a command.
             case AvailableCommands.OpenFile:
                 return noCommandArray.Count == 1;
+            case AvailableCommands.SetBind:
+                return noCommandArray.Count == 2 || noCommandArray.Count == 3;
+            case AvailableCommands.ListBinds:
+                return noCommandArray.Count == 0;
+            case AvailableCommands.ResetBinds:
+                return noCommandArray.Count == 0;
             default:
                 return false;
         }
@@ -856,6 +879,58 @@ private CommandResult ExecuteToggleHidden(AvailableCommands typedCommand, string
         return CommandResult.NoOp(message: $"Command `{nameOfCommand}` not found. Type 'help' to see all available commands.");
     }
 
+    private CommandResult ExecuteSetBindForAction(AvailableCommands typedCommand, string nameOfCommand,
+        List<string> command)
+    {
+        if (!CheckMinLengthForEachCommand(typedCommand, command))
+        {
+            throw new AppException(
+                $"Command {nameOfCommand} requires at least 3 arguments!",
+                $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
+        }
+
+        string action = command[1];
+        string bind = command[2];
+        bool overwrite = command.Count == 4 && ParseFlags(command[3], nameOfCommand, typedCommand) == FlagsForCommands.OverwriteBind;
+
+        _keyBindingSettingsService.SetBinding(action, bind, overwrite);
+        string normalizedAction = action.Trim().ToLowerInvariant();
+        string normalizedBind = _keyBindingSettingsService.NormalizeGesture(bind);
+
+        return CommandResult.Ok(message: $"Set binding for `{normalizedAction}` to `{normalizedBind}` in `{_keyBindingSettingsService.SettingsFilePath}`.");
+    }
+
+    private CommandResult ExecuteListBindings(AvailableCommands typedCommand, string nameOfCommand, List<string> command)
+    {
+        if (!CheckMinLengthForEachCommand(typedCommand, command))
+        {
+            throw new AppException(
+                $"Command {nameOfCommand} requires no arguments!",
+                $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
+        }
+
+        var payload = _keyBindingSettingsService
+            .GetBindings()
+            .OrderBy(kvp => kvp.Key)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value ?? "(unbound)");
+
+        return CommandResult.Ok(payload, $"Current bindings from `{_keyBindingSettingsService.SettingsFilePath}`.");
+    }
+
+    private CommandResult ExecuteResetBindings(AvailableCommands typedCommand, string nameOfCommand, List<string> command)
+    {
+        if (!CheckMinLengthForEachCommand(typedCommand, command))
+        {
+            throw new AppException(
+                $"Command {nameOfCommand} requires no arguments!",
+                $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
+        }
+
+        _keyBindingSettingsService.ResetToDefaults();
+        return CommandResult.Ok(message: $"Restored default bindings in `{_keyBindingSettingsService.SettingsFilePath}`.");
+    }
+
+
     public async Task<CommandResult> ExecuteAllParsed(List<string> command, string currentDirectory = "")
     {
         if (!ValidateCommand(command)) return CommandResult.NoOp("No command provided.");
@@ -888,6 +963,9 @@ private CommandResult ExecuteToggleHidden(AvailableCommands typedCommand, string
             AvailableCommands.Hidden => ExecuteToggleHidden(typedCommand, nameOfCommand, command),
             AvailableCommands.Find => await ExecuteFind(typedCommand, nameOfCommand, command, currentDirectory),
             AvailableCommands.OpenFile => ExecuteOpenFile(typedCommand, nameOfCommand, command, currentDirectory),
+            AvailableCommands.SetBind => ExecuteSetBindForAction(typedCommand, nameOfCommand, command),
+            AvailableCommands.ListBinds => ExecuteListBindings(typedCommand, nameOfCommand, command),
+            AvailableCommands.ResetBinds => ExecuteResetBindings(typedCommand, nameOfCommand, command),
             _ => ExecuteDefault(nameOfCommand)
         };
     }

@@ -25,7 +25,10 @@ public enum AvailableCommands
     Search,
     Hidden,
     Find,
-    OpenFile
+    OpenFile,
+    SetBind,
+    ListBinds,
+    ResetBinds
 }
 
 public enum FlagsForCommands
@@ -43,5 +46,6 @@ public enum FlagsForCommands
     LsNone,
     FindExact,
     FindPattern,
-    FindNone
+    FindNone,
+    OverwriteBind,
 }
