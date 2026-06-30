@@ -7,7 +7,7 @@ FileSystemP is a Windows desktop file explorer and file-system inspection tool b
 - Drive-based explorer with folder tree and content panel
 - Breadcrumb navigation with back and forward history
 - Context-menu file operations for rename, move, delete, create, copy, paste, and undo
-- Built-in terminal command palette with file-system and navigation commands including `mv`
+- Built-in terminal command palette with file-system, navigation, and keybinding commands including `mv`, `set`, `binds`, and `resetbinds`
 - Detached terminal window that can be opened from the toolbar or with `F12`
 - Advanced search across names, extensions, attributes, size, and timestamps
 - Properties dialog with general, details, and security tabs
@@ -116,6 +116,7 @@ dotnet test .\tests\FileSystemP.Tests\FileSystemP.Tests.csproj
 - Compression support is explicitly limited to Windows NTFS volumes.
 - Shell metadata depends on Windows shell property APIs.
 - Security editing is based on Windows access control lists and Windows identities.
+- Keyboard shortcuts are stored per user in `%LocalAppData%\FileSystemP\ffsystem_settings.json` and validated on startup.
 - Terminal grouped arguments use backticks, for example:
 
 ```text

@@ -85,6 +85,7 @@ The terminal supports commands for:
 - file operations: `rename`, `mv`, `del`, `mkdir`, `mkfile`, `mkfilewith`, `cp`
 - navigation and view actions: `cd`, `back`, `forward`, `home`, `search`, `hidden`, `undo`
 - inspection: `ls`, `rfilecont`, `prop`, `open`, `find`
+- keybinding management: `set`, `binds`, `resetbinds`
 - help and discovery: `help`, `helpflags`, `explain`, `explainall`
 
 ### Grouped arguments
@@ -106,9 +107,32 @@ If the closing backtick is missing, the terminal shows a friendly input error in
 
 - `clear` clears the terminal history view.
 - `mv` moves a file or directory to the given destination path. If the destination is an existing directory, the item is moved into that directory.
+- `set <action> <binding>` assigns a shortcut to a supported action, for example `set undo Ctrl+Z`.
+- `binds` lists the current action-to-shortcut map.
+- `resetbinds` restores the default shortcut set.
+- Use `-ob` or `--overbind` with `set` when you want to reassign a shortcut that is already used by another action.
 - `cp` shows progress output in the terminal while the copy is running.
 - Commands such as `back`, `forward`, `search`, `hidden`, `undo`, `open`, and `prop` can and will trigger UI actions instead of only printing text. This is to keep terminal environments consistent with the main window's UI.
 - `help` lists available commands, while `explain` and `helpflags` provide more specific details.
+
+### Keyboard shortcuts
+
+Keyboard shortcuts are stored per user in `%LocalAppData%\FileSystemP\ffsystem_settings.json`.
+
+Behavior notes:
+
+- the settings file is validated on application startup
+- invalid or conflicting bindings are repaired before the UI uses them
+- shortcut changes made through the terminal take effect immediately in the running app
+- `binds` can be used to inspect the current mapping and `resetbinds` restores the defaults
+
+Default examples include:
+
+- `Ctrl+Z` for undo
+- `Ctrl+F` for search
+- `F12` for the detached terminal
+- `F2` for rename
+- `Delete` for delete
 
 ## Search
 
