@@ -250,7 +250,7 @@
             <Separator Width="1" Margin="4,6" Background="{DynamicResource AppMuted}"/>
             <Button Content="Search" Command="{Binding ShowSearchMenuCommand}" Style="{StaticResource ToolbarButton}" Padding="10,4" FontSize="12" ToolTip="Open search menu"/>
             <Separator Width="1" Margin="4,6" Background="{DynamicResource AppMuted}"/>
-            <CheckBox Content="Show Hidden" 
+            <CheckBox Content="Show Hidden"
                       IsChecked="{Binding Panel.ShowHiddenFiles}"
                       Foreground="{DynamicResource AppForeground}"
                       VerticalAlignment="Center"
@@ -278,6 +278,9 @@
                                   Background="Transparent"
                                   Foreground="{DynamicResource AppForeground}"
                                   BorderThickness="0"
+                                  AllowDrop="True"
+                                  DragOver="FileTree_DragOver"
+                                  Drop="FileTree_Drop"
                                   SelectedItemChanged="FileTree_SelectedItemChanged">
                             <TreeView.ItemTemplate>
                                 <HierarchicalDataTemplate ItemsSource="{Binding Children}">
@@ -492,8 +495,13 @@
                           Background="Transparent"
                           Foreground="{DynamicResource AppForeground}"
                           BorderThickness="0"
+                          AllowDrop="True"
                           MouseDoubleClick="FileList_MouseDoubleClick"
+                          PreviewMouseLeftButtonDown="FileList_PreviewMouseLeftButtonDown"
                           PreviewMouseRightButtonDown="FileList_PreviewMouseRightButtonDown"
+                          MouseMove="FileList_MouseMove"
+                          DragOver="FileList_DragOver"
+                          Drop="FileList_Drop"
                           ContextMenu="{StaticResource EmptySpaceMenu}">
                     <ListView.View>
                         <GridView>
@@ -588,7 +596,7 @@
                 </Style>
             </GridSplitter.Style>
         </GridSplitter>
-        <localViews:CommandPaletteView Grid.Row="3" 
+        <localViews:CommandPaletteView Grid.Row="3"
                                        DataContext="{Binding Palette}">
             <localViews:CommandPaletteView.Style>
                 <Style TargetType="localViews:CommandPaletteView">
