@@ -50,6 +50,7 @@ flowchart TD
 - an explorer sidebar with a drive-based tree
 - a search sidebar with advanced filters
 - a list-based content panel for the current folder
+- drag-and-drop move support from the content panel into folders in the panel or explorer tree
 - an embedded terminal host that can be swapped out for a detached terminal window
 
 ### View-model responsibilities
@@ -59,7 +60,7 @@ flowchart TD
 | `MainWindowViewModel` | Coordinates navigation, path history, breadcrumb generation, and top-level composition |
 | `FileTreeViewModel` | Exposes ready drives as explorer roots |
 | `FileTreeNode` | Lazily expands subdirectories when a tree node is opened |
-| `FilePanelViewModel` | Loads folder contents and performs rename, delete, create, copy, paste, undo, and properties actions |
+| `FilePanelViewModel` | Loads folder contents and performs rename, move, delete, create, copy, paste, undo, and properties actions |
 | `SearchViewModel` | Builds advanced search criteria, runs cancellable search, and projects results into the file panel |
 | `CommandPaletteViewModel` | Tokenizes terminal input, invokes command parsing, and maps `CommandResult` responses into UI actions |
 | `PropertiesViewModel` | Aggregates NTFS metadata, shell metadata, editable attributes, and security state |
@@ -94,13 +95,14 @@ The core library is organized by behavior rather than by UI feature:
 
 - enumerate direct children of a folder
 - rename files and directories
+- move files and directories
 - delete files and directories
 - create files and directories
 - create files with initial content
 - copy files and directories (recursive)
 - read file bytes
 
-`UndoService` tracks undoable file-system actions such as rename, create, delete, and selected copy flows so both toolbar and terminal commands can revert recent operations.
+`UndoService` tracks undoable file-system actions such as rename, move, create, delete, and selected copy flows so both toolbar and terminal commands can revert recent operations.
 
 ### Command subsystem
 
@@ -115,7 +117,7 @@ The parser is intentionally UI-agnostic. It receives a `List<string>` plus the c
 
 Supported command areas currently include:
 
-- file-system mutation: `rename`, `del`, `mkdir`, `mkfile`, `mkfilewith`, `cp`
+- file-system mutation: `rename`, `mv`, `del`, `mkdir`, `mkfile`, `mkfilewith`, `cp`
 - navigation and window actions: `cd`, `back`, `forward`, `home`, `search`, `hidden`, `open`, `prop`, `undo`
 - discovery and help: `help`, `helpflags`, `explain`, `explainall`, `ls`, `find`, `rfilecont`
 
