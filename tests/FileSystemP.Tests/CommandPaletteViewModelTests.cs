@@ -141,4 +141,39 @@ public class CommandPaletteViewModelTests
             }
         }
     }
+
+    [Fact]
+    public async Task ExecuteCommand_Mv_MovesFileIntoDirectory()
+    {
+        var testDir = Path.Combine(Path.GetTempPath(), "FileSystemP_ViewModelTests_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(testDir);
+
+        try
+        {
+            var sourcePath = Path.Combine(testDir, "source.txt");
+            var destinationDirectory = Path.Combine(testDir, "dest");
+            var finalPath = Path.Combine(destinationDirectory, "source.txt");
+            File.WriteAllText(sourcePath, "move me");
+            Directory.CreateDirectory(destinationDirectory);
+
+            var mainVm = new MainWindowViewModel();
+            var vm = new CommandPaletteViewModel(p => { }, mainVm, new UndoService());
+            vm.UpdatePrompt(testDir);
+            vm.Input = "mv source.txt dest";
+
+            await vm.ExecuteCommand();
+
+            Assert.False(File.Exists(sourcePath));
+            Assert.True(File.Exists(finalPath));
+            Assert.Equal("move me", File.ReadAllText(finalPath));
+            Assert.Contains(vm.OutputHistory, line => line.Text == $"Moved `{sourcePath}` to `{destinationDirectory}`.");
+        }
+        finally
+        {
+            if (Directory.Exists(testDir))
+            {
+                Directory.Delete(testDir, true);
+            }
+        }
+    }
 }
