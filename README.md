@@ -108,6 +108,7 @@ dotnet test .\tests\FileSystemP.Tests\FileSystemP.Tests.csproj
 - [Architecture](docs/architecture.md)
 - [User Guide](docs/user-guide.md)
 - [Developer Guide](docs/developer-guide.md)
+- [Keybinding and Settings Guide](docs/keybinding-settings.md)
 - [Attribute Behavior Reference](docs/attribute-behavior.md)
 
 ## Current Platform Notes
