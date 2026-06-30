@@ -168,21 +168,76 @@ public partial class MainWindow : Window
         return null;
     }
 
-    protected override void OnKeyDown(System.Windows.Input.KeyEventArgs e)
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
-        base.OnKeyDown(e);
-        if (DataContext is MainWindowViewModel vm)
+        base.OnPreviewKeyDown(e);
+        if (DataContext is not MainWindowViewModel vm)
         {
-            if (e.Key == System.Windows.Input.Key.F12)
-            {
-                vm.ShowDetachedTerminalWindowCommand.Execute(null);
-                e.Handled = true;
-            }
-            else if (e.Key == System.Windows.Input.Key.Escape && vm.Palette.IsVisible && !vm.IsTerminalDetached)
-            {
-                vm.Palette.IsVisible = false;
-                e.Handled = true;
-            }
+            return;
         }
+
+        if (e.Key == Key.Escape && vm.Palette.IsVisible && !vm.IsTerminalDetached)
+        {
+            vm.Palette.IsVisible = false;
+            e.Handled = true;
+            return;
+        }
+
+        string? gesture = GetGestureText(e);
+        if (gesture is null)
+        {
+            return;
+        }
+
+        if (vm.TryExecuteKeyBinding(gesture))
+        {
+            e.Handled = true;
+        }
+    }
+
+    private static string? GetGestureText(KeyEventArgs e)
+    {
+        Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
+        {
+            return null;
+        }
+
+        string? keyName = key switch
+        {
+            >= Key.A and <= Key.Z => key.ToString().ToUpperInvariant(),
+            >= Key.D0 and <= Key.D9 => key.ToString()[1..],
+            >= Key.F1 and <= Key.F24 => key.ToString().ToUpperInvariant(),
+            Key.Enter => "Enter",
+            Key.Escape => "Escape",
+            Key.Delete => "Delete",
+            Key.Insert => "Insert",
+            Key.Tab => "Tab",
+            Key.Space => "Space",
+            Key.Back => "Backspace",
+            Key.Left => "Left",
+            Key.Right => "Right",
+            Key.Up => "Up",
+            Key.Down => "Down",
+            Key.Home => "Home",
+            Key.End => "End",
+            Key.PageUp => "PageUp",
+            Key.PageDown => "PageDown",
+            _ => null
+        };
+
+        if (keyName is null)
+        {
+            return null;
+        }
+
+        var parts = new List<string>();
+        ModifierKeys modifiers = Keyboard.Modifiers;
+        if (modifiers.HasFlag(ModifierKeys.Control)) parts.Add("Ctrl");
+        if (modifiers.HasFlag(ModifierKeys.Alt)) parts.Add("Alt");
+        if (modifiers.HasFlag(ModifierKeys.Shift)) parts.Add("Shift");
+        if (modifiers.HasFlag(ModifierKeys.Windows)) parts.Add("Win");
+        parts.Add(keyName);
+        return string.Join('+', parts);
     }
 }

@@ -13,6 +13,8 @@ namespace FileSystemP.WPF.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
+    private readonly IKeyBindingSettingsService _keyBindingSettingsService;
+
     public FileTreeViewModel Tree { get; }
     public FilePanelViewModel Panel { get; }
     public SearchViewModel Search { get; }
@@ -34,16 +36,19 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly Stack<string> _forwardStack = new();
     private TerminalWindow? _terminalWindow;
 
-    public MainWindowViewModel()
+    public MainWindowViewModel(IKeyBindingSettingsService? keyBindingSettingsService = null)
     {
         var undoService = new UndoService();
         var metadataProvider = new NtfsMetadataProvider();
         var searchService = new FileSystemP.Core.SearchService.SearchService();
 
+        _keyBindingSettingsService = keyBindingSettingsService ?? new KeyBindingSettingsService();
+        _keyBindingSettingsService.EnsureSettingsFileIsValid();
+
         Tree = new FileTreeViewModel(NavigateTo);
         Panel = new FilePanelViewModel(NavigateTo, metadataProvider, undoService);
         Search = new SearchViewModel(searchService, Panel, NavigateTo);
-        Palette = new CommandPaletteViewModel(NavigateTo, this, undoService);
+        Palette = new CommandPaletteViewModel(NavigateTo, this, undoService, _keyBindingSettingsService);
     }
 
     partial void OnCurrentPathChanged(string value)
@@ -52,7 +57,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             Directory.SetCurrentDirectory(value);
         }
-        
+
         _ = Panel.LoadEntries(value);
         UpdatePathSegments(value);
         Palette?.UpdatePrompt(value);
@@ -71,7 +76,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         // Split by backslash, keeping the root (e.g., C:\) correctly
         var parts = path.Split(new[] { Path.DirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
-        
+
         // Handle drive root (e.g., C:\)
         var driveMatch = System.Text.RegularExpressions.Regex.Match(path, @"^[a-zA-Z]:\\");
         if (driveMatch.Success)
@@ -102,7 +107,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (!string.IsNullOrEmpty(CurrentPath))
             _backStack.Push(CurrentPath);
-        
+
         _forwardStack.Clear();
         CurrentPath = path;
         NavigateBackCommand.NotifyCanExecuteChanged();
@@ -142,6 +147,64 @@ public partial class MainWindowViewModel : ObservableObject
     private void ShowSearchMenu()
     {
         SelectedSidebarSectionIndex = 1;
+    }
+
+    public bool TryExecuteKeyBinding(string gesture)
+    {
+        if (!_keyBindingSettingsService.TryGetActionForGesture(gesture, out string action))
+        {
+            return false;
+        }
+
+        return action switch
+        {
+            "undo" => ExecuteCommandIfPossible(Panel.UndoCommand),
+            "back" => ExecuteCommandIfPossible(NavigateBackCommand),
+            "forward" => ExecuteCommandIfPossible(NavigateForwardCommand),
+            "home" => ExecuteHomeBinding(),
+            "search" => ExecuteCommandIfPossible(ShowSearchMenuCommand),
+            "hidden" => ExecuteHiddenBinding(),
+            "terminal" => ExecuteCommandIfPossible(ShowDetachedTerminalWindowCommand),
+            "open" => ExecuteCommandIfPossible(Panel.OpenCommand),
+            "rename" => ExecuteCommandIfPossible(Panel.RenameCommand),
+            "delete" => ExecuteCommandIfPossible(Panel.DeleteCommand),
+            "copy" => ExecuteCommandIfPossible(Panel.CopyCommand),
+            "paste" => ExecuteCommandIfPossible(Panel.PasteCommand),
+            "newfile" => ExecuteCommandIfPossible(Panel.NewFileCommand),
+            "newfilewithcontent" => ExecuteCommandIfPossible(Panel.NewFileWithContentCommand),
+            "newfolder" => ExecuteCommandIfPossible(Panel.NewFolderCommand),
+            "properties" => ExecuteCommandIfPossible(Panel.ShowPropertiesCommand),
+            _ => false
+        };
+    }
+
+    private bool ExecuteCommandIfPossible(System.Windows.Input.ICommand command)
+    {
+        if (!command.CanExecute(null))
+        {
+            return false;
+        }
+
+        command.Execute(null);
+        return true;
+    }
+
+    private bool ExecuteHomeBinding()
+    {
+        string homePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (string.IsNullOrWhiteSpace(homePath))
+        {
+            return false;
+        }
+
+        NavigateToCommand.Execute(homePath);
+        return true;
+    }
+
+    private bool ExecuteHiddenBinding()
+    {
+        Panel.ShowHiddenFiles = !Panel.ShowHiddenFiles;
+        return true;
     }
 
     public void OpenDetachedTerminal()
