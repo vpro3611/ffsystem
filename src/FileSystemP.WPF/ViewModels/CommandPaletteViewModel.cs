@@ -42,11 +42,11 @@ public partial class CommandPaletteViewModel : ObservableObject
     public List<string> CommandHistory { get; } = new();
     private int _historyIndex = -1;
 
-    public CommandPaletteViewModel(Action<string> onNavigate, MainWindowViewModel mainWindow, IUndoService undoService)
+    public CommandPaletteViewModel(Action<string> onNavigate, MainWindowViewModel mainWindow, IUndoService undoService, IKeyBindingSettingsService? keyBindingSettingsService = null)
     {
         _onNavigate = onNavigate;
         _mainWindow = mainWindow;
-        _parser = Parser.CreateParser(undoService);
+        _parser = Parser.CreateParser(undoService, keyBindingSettingsService);
         UpdatePrompt();
     }
 
@@ -76,7 +76,7 @@ public partial class CommandPaletteViewModel : ObservableObject
         string cmdText = Input.Trim();
         CommandHistory.Add(cmdText);
         _historyIndex = CommandHistory.Count;
-        
+
         OutputHistory.Add(new TerminalLine($"{Prompt} {cmdText}", Brushes.Green));
 
         if (cmdText.ToLower() == "clear")
@@ -98,7 +98,7 @@ public partial class CommandPaletteViewModel : ObservableObject
             Input = string.Empty;
             return;
         }
-        
+
         // Handle 'cp' specifically to support progress bar
         if (parts[0].ToLower() == "cp")
         {
@@ -106,7 +106,7 @@ public partial class CommandPaletteViewModel : ObservableObject
         }
         else
         {
-            try 
+            try
             {
                 var result = await _parser.ExecuteAllParsed(parts, _currentDirectory);
                 HandleResult(result, parts);
@@ -118,7 +118,7 @@ public partial class CommandPaletteViewModel : ObservableObject
         }
 
         Input = string.Empty;
-    }   
+    }
 
     private static List<string> TokenizeCommand(string commandText)
     {
@@ -160,7 +160,7 @@ public partial class CommandPaletteViewModel : ObservableObject
 
         return parts;
     }
-    
+
     // TODO:
     // This command currently performs its own flag parsing.
     // Future refactor: use Parser.ParseFlags() result instead
@@ -193,7 +193,7 @@ public partial class CommandPaletteViewModel : ObservableObject
             });
 
             await Task.Run(() => FileSystemP.Core.Services.FileDirectorySystemService.Copy(source, destination, overwrite, progress));
-            
+
             OutputHistory[lastIndex] = new TerminalLine("Copy complete.", Brushes.White);
         }
         catch (Exception ex)
@@ -208,7 +208,7 @@ public partial class CommandPaletteViewModel : ObservableObject
         {
             if (result.Message != null)
                 OutputHistory.Add(new TerminalLine(result.Message, Brushes.White));
-            
+
             if (result.Payload is IEnumerable<string> list)
             {
                 foreach (var item in list)
@@ -241,7 +241,7 @@ public partial class CommandPaletteViewModel : ObservableObject
             else if (result.Payload is FileContentResult fileContentResult)
             {
                 string content = Encoding.UTF8.GetString(fileContentResult.Content);
-                
+
                 OutputHistory.Add(new TerminalLine(content, Brushes.White));
             }
 
