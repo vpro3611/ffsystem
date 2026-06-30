@@ -57,7 +57,7 @@ flowchart TD
 
 | View model | Responsibility |
 | --- | --- |
-| `MainWindowViewModel` | Coordinates navigation, path history, breadcrumb generation, and top-level composition |
+| `MainWindowViewModel` | Coordinates navigation, path history, breadcrumb generation, top-level composition, and keybinding-driven UI actions |
 | `FileTreeViewModel` | Exposes ready drives as explorer roots |
 | `FileTreeNode` | Lazily expands subdirectories when a tree node is opened |
 | `FilePanelViewModel` | Loads folder contents and performs rename, move, delete, create, copy, paste, undo, and properties actions |
@@ -104,6 +104,8 @@ The core library is organized by behavior rather than by UI feature:
 
 `UndoService` tracks undoable file-system actions such as rename, move, create, delete, and selected copy flows so both toolbar and terminal commands can revert recent operations.
 
+`KeyBindingSettingsService` stores, validates, normalizes, and restores per-user keyboard shortcuts in `%LocalAppData%\FileSystemP\ffsystem_settings.json`.
+
 ### Command subsystem
 
 The command subsystem lives in `FileSystemP.Core/CommandService` and is composed around:
@@ -119,6 +121,7 @@ Supported command areas currently include:
 
 - file-system mutation: `rename`, `mv`, `del`, `mkdir`, `mkfile`, `mkfilewith`, `cp`
 - navigation and window actions: `cd`, `back`, `forward`, `home`, `search`, `hidden`, `open`, `prop`, `undo`
+- keybinding management: `set`, `binds`, `resetbinds`
 - discovery and help: `help`, `helpflags`, `explain`, `explainall`, `ls`, `find`, `rfilecont`
 
 `DriveService` returns ready drives and allows lookup by drive name.
@@ -188,6 +191,8 @@ flowchart TD
 The codebase uses a project-specific `AppException` to wrap many lower-level failures and preserve the originating service or method name. In the UI layer, most operation failures are surfaced to the user through dialogs or inline error messages rather than terminating the application.
 
 Terminal tokenization errors, such as an unmatched backtick in a grouped argument, are handled in the WPF layer before a command is sent to the core parser. That keeps user-facing input errors separate from core command semantics.
+
+Keybinding settings are also validated at startup so malformed or conflicting shortcut definitions are repaired before the main window tries to execute them.
 
 ## Testing Strategy
 
