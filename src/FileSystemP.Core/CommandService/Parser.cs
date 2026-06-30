@@ -13,7 +13,7 @@ public class Parser : IParser
     {
         _undoService = undoService;
     }
-    
+
     private static readonly Dictionary<string, AvailableCommands> CommandMap = new()
     {
         ["cd"] = AvailableCommands.Cd,
@@ -23,6 +23,7 @@ public class Parser : IParser
         ["mkfile"] = AvailableCommands.CreateFile,
         ["mkfilewith"] = AvailableCommands.CreateFileWithContent,
         ["cp"] = AvailableCommands.Copy,
+        ["mv"] = AvailableCommands.Move,
         ["rfilecont"] = AvailableCommands.ReadFileContents,
         ["exit"] = AvailableCommands.Exit,
         ["help"] = AvailableCommands.Help,
@@ -68,7 +69,7 @@ public class Parser : IParser
         ["-p"] = FlagsForCommands.FindPattern,
         ["--pattern"] = FlagsForCommands.FindPattern,
     };
-    
+
     private static readonly Dictionary<AvailableCommands, List<FlagsForCommands>> CommandFlagsMap = new()
     {
         [AvailableCommands.Cd] = [],
@@ -86,6 +87,7 @@ public class Parser : IParser
             FlagsForCommands.Overwrite,
             FlagsForCommands.NoOverwrite
         ],
+        [AvailableCommands.Move] = [],
         [AvailableCommands.ReadFileContents] = [],
         [AvailableCommands.Exit] = [],
         [AvailableCommands.Help] = [],
@@ -115,9 +117,9 @@ public class Parser : IParser
         ],
         [AvailableCommands.OpenFile] = [],
     };
-    
-    
-    
+
+
+
     private static readonly Dictionary<string, string> CommandAndFlagDescriptions = new()
     {
         ["cd"] = "Changes the current location context to the target path by validating that the path can be opened. Flags: none. Example: cd C:\\Temp",
@@ -127,6 +129,7 @@ public class Parser : IParser
         ["mkfile"] = "Creates an empty file if it does not already exist. Usage: mkfile <path>. Flags: none. Example: mkfile C:\\Temp\\notes.txt",
         ["mkfilewith"] = "Creates a file and writes content into it, overwriting existing content if the file already exists. Usage: mkfilewith <path> <content>. Flags: none. Example: mkfilewith C:\\Temp\\notes.txt Hello",
         ["cp"] = "Copies a file to a new destination. Usage: cp <source> <destination> <flag>. Flags: -o/--overwrite replaces the destination if it exists, -no/--no-overwrite fails when the destination already exists. Example: cp C:\\Temp\\a.txt C:\\Backup\\a.txt -o",
+        ["mv"] = "Moves or renames a file or directory to a new destination. Usage: mv <path> <destination>. If destination is an existing directory, the item is moved into it. Flags: none. Example: mv C:\\Temp\\a.txt C:\\Archive",
         ["rfilecont"] = "Reads file contents. Usage: rfilecont <path> or rfilecont <path> <line-count>. With no line count it reads the whole file as bytes; with a positive line count it reads the first N lines; with a negative line count it reads the last N lines. Flags: none. Example: rfilecont C:\\Temp\\notes.txt 10",
         ["exit"] = "Exits the command workflow or application when the outer caller handles the exit result. Flags: none. Example: exit",
         ["help"] = "Displays help information for available commands and flags. Or your can request help for specific command or flag: help <target>. Flags: none. Example: help",
@@ -173,8 +176,8 @@ public class Parser : IParser
     {
         return new Parser(undoService);
     }
-    
-    private FlagsForCommands ValidateFlag(string potentialFlag, string nameOfCurrentCommand) 
+
+    private FlagsForCommands ValidateFlag(string potentialFlag, string nameOfCurrentCommand)
     {
         if (FlagMap.TryGetValue(potentialFlag, out var typedFlag))
         {
@@ -190,11 +193,11 @@ public class Parser : IParser
         {
             return typedFlags;
         }
-        
+
         throw new AppException($"Command `{typedCommand}` not found!", $"{nameof(Parser)}.{nameof(GetFlagsForSpecificCommand)}()");
     }
-    
-    private FlagsForCommands ParseFlags(string potentialFlag, string nameOfCurrentCommand, AvailableCommands currentCommand) 
+
+    private FlagsForCommands ParseFlags(string potentialFlag, string nameOfCurrentCommand, AvailableCommands currentCommand)
     {
         FlagsForCommands validFlag = ValidateFlag(potentialFlag, nameOfCurrentCommand);
         List<FlagsForCommands> flagsForSpecificCommand = GetFlagsForSpecificCommand(currentCommand);
@@ -204,7 +207,7 @@ public class Parser : IParser
         }
         throw new AppException($"Flag `{potentialFlag}` not found for command `{nameOfCurrentCommand}`!", $"{nameof(Parser)}.{nameof(ParseFlags)}()");
     }
-    
+
     private bool ValidateCommand(List<string> command)
     {
         return command.Count != 0;
@@ -214,7 +217,7 @@ public class Parser : IParser
     {
         return command.Skip(1).ToList();
     }
-    
+
     private bool CheckMinLengthForEachCommand(AvailableCommands currentCommand, List<string> command)
     {
         List<string> noCommandArray = ExcludeCommandFromArray(command);
@@ -234,15 +237,17 @@ public class Parser : IParser
                 return noCommandArray.Count == 2;
             case AvailableCommands.Copy:
                 return noCommandArray.Count == 3;
+            case AvailableCommands.Move:
+                return noCommandArray.Count == 2;
             case AvailableCommands.ReadFileContents:
                 return noCommandArray.Count == 1 || noCommandArray.Count == 2;
-            case AvailableCommands.Help: 
+            case AvailableCommands.Help:
                 return noCommandArray.Count == 0 || noCommandArray.Count == 1;
             case AvailableCommands.HelpForFlags:
                 return noCommandArray.Count == 0 || noCommandArray.Count == 1;
             case AvailableCommands.Exit:
                 return noCommandArray.Count == 0;
-            case AvailableCommands.Explain: 
+            case AvailableCommands.Explain:
                 return noCommandArray.Count > 0;
             case AvailableCommands.ExplainAll:
                 return noCommandArray.Count == 0;
@@ -263,14 +268,14 @@ public class Parser : IParser
             case AvailableCommands.Hidden:
                 return noCommandArray.Count == 0;
             case AvailableCommands.Find:
-                return noCommandArray.Count == 1 || noCommandArray.Count == 2; // [find] name --flag (2) OR [find] name (1), so should contain 1 OR 2 elements without a command. 
+                return noCommandArray.Count == 1 || noCommandArray.Count == 2; // [find] name --flag (2) OR [find] name (1), so should contain 1 OR 2 elements without a command.
             case AvailableCommands.OpenFile:
                 return noCommandArray.Count == 1;
             default:
                 return false;
         }
     }
-    
+
     private AvailableCommands IndentifyCommand(string command)
     {
         if (CommandMap.TryGetValue(command, out var typedCommand))
@@ -300,7 +305,7 @@ public class Parser : IParser
         // Return both the entries and the absolute path
         return CommandResult.Ok(new CdResult(entries, dirInfo.FullName), $"Validated path `{dirInfo.FullName}`.");
     }
-    
+
     private string ResolvePath(string path, string currentDirectory)
     {
         if (string.IsNullOrEmpty(path)) return currentDirectory;
@@ -335,7 +340,7 @@ public class Parser : IParser
         string pathForDel = ResolvePath(command[1], currentDirectory);
         FlagsForCommands flag = ParseFlags(command[2], nameOfCommand, typedCommand);
         bool recursive = flag == FlagsForCommands.Recursive;
-        
+
         FileDirectorySystemService.Delete(pathForDel, recursive);
         _undoService?.Push(new UndoDeleteAction(pathForDel));
 
@@ -382,7 +387,7 @@ public class Parser : IParser
         _undoService?.Push(new UndoCreateAction(pathForCreateFile));
         return CommandResult.Ok(message: $"Created file `{pathForCreateFile}` with content.");
     }
-    
+
     private CommandResult ExecuteCopy(AvailableCommands typedCommand, string nameOfCommand, List<string> command, string currentDirectory)
     {
         if (!CheckMinLengthForEachCommand(typedCommand, command))
@@ -393,9 +398,9 @@ public class Parser : IParser
         string source = ResolvePath(command[1], currentDirectory);
         string destination = ResolvePath(command[2], currentDirectory);
         FlagsForCommands flagCopy = ParseFlags(command[3], nameOfCommand, typedCommand);
-                
+
         bool overwrites = flagCopy == FlagsForCommands.Overwrite;
-        
+
         // Calculate final destination for undo
         string finalDestination = destination;
         if (Directory.Exists(destination))
@@ -405,13 +410,33 @@ public class Parser : IParser
         }
 
         FileDirectorySystemService.Copy(source, destination, overwrites);
-        
-        // Only push undo if we didn't overwrite something important 
-        // (Actually, if we overwrite, UndoCreateAction will delete the new file, 
+
+        // Only push undo if we didn't overwrite something important
+        // (Actually, if we overwrite, UndoCreateAction will delete the new file,
         // but we won't get the old one back. This is a limitation for now).
         _undoService?.Push(new UndoCreateAction(finalDestination));
 
         return CommandResult.Ok(message: $"Copied `{source}` to `{destination}` with overwrite flag being set to `{overwrites}`.");
+    }
+
+    private CommandResult ExecuteMove(AvailableCommands typedCommand, string nameOfCommand, List<string> command, string currentDirectory)
+    {
+        if (!CheckMinLengthForEachCommand(typedCommand, command))
+        {
+            throw new AppException($"Command {nameOfCommand} requires at least 3 arguments!",
+                $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
+        }
+
+        string source = ResolvePath(command[1], currentDirectory);
+        string destination = ResolvePath(command[2], currentDirectory);
+        string finalDestination = Directory.Exists(destination)
+            ? Path.Combine(destination, Path.GetFileName(source.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)))
+            : destination;
+
+        FileDirectorySystemService.Move(source, destination);
+        _undoService?.Push(new UndoMoveAction(finalDestination, source));
+
+        return CommandResult.Ok(message: $"Moved `{source}` to `{destination}`.");
     }
 
     private async Task<CommandResult> ExecuteReadFileContents(AvailableCommands typedCommand, string nameOfCommand, List<string> command, string currentDirectory)
@@ -445,7 +470,7 @@ public class Parser : IParser
 
         return CommandResult.Exit("Exiting the application. Goodbye!");
     }
-    
+
     private CommandResult ExecuteHelp(AvailableCommands typedCommand, string nameOfCommand, List<string> command)
     {
         if (!CheckMinLengthForEachCommand(typedCommand, command))
@@ -454,7 +479,7 @@ public class Parser : IParser
                 $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
         }
         var specificCommand = command.Count == 2 ? command[1] : null;
-        
+
         if (specificCommand is not null)
         {
             if (CommandMap.TryGetValue(specificCommand, out var typedSpecificCommand))
@@ -474,7 +499,7 @@ public class Parser : IParser
                 $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
         }
         var specificCommand = command.Count == 2 ? command[1] : null;
-        
+
         if (specificCommand is not null)
         {
             if (FlagMap.TryGetValue(specificCommand, out var typedSpecificCommand))
@@ -495,7 +520,7 @@ public class Parser : IParser
         }
         List<string> forExplanation = command.Skip(1).ToList();
         Dictionary<string, string> explanation = new();
-        foreach (string element in forExplanation) 
+        foreach (string element in forExplanation)
         {
             if (CommandAndFlagDescriptions.TryGetValue(element, out var description))
             {
@@ -506,7 +531,7 @@ public class Parser : IParser
                 explanation.Add(element, $"No description available. This `{element}` does not exist.");
             }
         }
-        
+
         return CommandResult.Ok(explanation, "Explanation of the commands and flags provided.");
     }
 
@@ -530,7 +555,7 @@ public class Parser : IParser
     {
         int n = 1;
         Dictionary<string, FileSystemInfo> result = new();
-        
+
         foreach (var entry in entries)
         {
             result.Add(n.ToString(), entry);
@@ -570,7 +595,7 @@ private CommandResult ExecuteLsCore(
 
     Dictionary<string, FileSystemInfo> result =
         MapperHelper(entries.ToList());
-    
+
     return CommandResult.Ok(
         result,
         description ?? $"List of files in directory `{path}`.");
@@ -579,7 +604,7 @@ private CommandResult ExecuteLsCore(
 private CommandResult ExecuteLsHidden(string path, bool hidden)
 {
     var dirInfo = ValidateDirectoryInfo(path);
-    
+
     IEnumerable<FileSystemInfo> entries =
         FileDirectorySystemService.GetEntries(dirInfo.FullName);
 
@@ -643,13 +668,13 @@ private CommandResult ExecuteLs(
                 path,
                 e => e.CreationTime,
                 $"List of files in directory `{path}` sorted by creation time in ascending order."),
-        
-        FlagsForCommands.LsOnlyHidden => 
+
+        FlagsForCommands.LsOnlyHidden =>
             ExecuteLsHidden(path, hidden: true),
-        
-        FlagsForCommands.LsNoHidden => 
+
+        FlagsForCommands.LsNoHidden =>
             ExecuteLsHidden(path, hidden: false),
-        
+
         FlagsForCommands.LsNone =>
             ExecuteLsCore(path),
 
@@ -702,7 +727,7 @@ private CommandResult ExecuteBack(AvailableCommands typedCommand, string nameOfC
             $"Command {nameOfCommand} requires no arguments!",
             $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
     }
-    
+
     return CommandResult.Back("Navigating back in history.");
 }
 
@@ -714,7 +739,7 @@ private CommandResult ExecuteForward(AvailableCommands typedCommand, string name
             $"Command {nameOfCommand} requires no arguments!",
             $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
     }
-    
+
     return CommandResult.Forward("Navigating forward in history.");
 }
 
@@ -725,11 +750,11 @@ private CommandResult ExecuteGoHome(AvailableCommands typedCommand, string nameO
     {
         throw new AppException(
             $"Command {nameOfCommand} requires no arguments!",
-            $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");   
+            $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
     }
 
     string homePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-    
+
     return CommandResult.Home(homePath, $"Navigated to home directory: `{homePath}`.");
 }
 
@@ -741,7 +766,7 @@ private CommandResult ExecuteUndo(AvailableCommands typedCommand, string nameOfC
             $"Command {nameOfCommand} requires no arguments!",
             $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
     }
-    
+
     return CommandResult.Undo("Undoing the last action.");
 }
 
@@ -753,7 +778,7 @@ private CommandResult ExecuteOpenSearch(AvailableCommands typedCommand, string n
             $"Command {nameOfCommand} requires no arguments!",
             $"{nameof(Parser)}.{nameof(CheckMinLengthForEachCommand)}()");
     }
-    
+
     return CommandResult.OpenSearch("Opening search window.");
 }
 
@@ -780,8 +805,8 @@ private CommandResult ExecuteToggleHidden(AvailableCommands typedCommand, string
     }
 
     string searchTerm = command[1];
-    FlagsForCommands flag = 
-        command.Count == 3 
+    FlagsForCommands flag =
+        command.Count == 3
             ? ParseFlags(command[2], nameOfCommand, typedCommand)
             : FlagsForCommands.FindNone;
 
@@ -822,21 +847,21 @@ private CommandResult ExecuteToggleHidden(AvailableCommands typedCommand, string
         {
             throw new AppException($"File not found for opening: {pathToOpenFile}", $"{nameof(Parser)}.{nameof(ExecuteOpenFile)}()");
         }
-        
+
         return CommandResult.OpenFile(pathToOpenFile, $"Opening file: {pathToOpenFile}");
     }
-    
+
     private CommandResult ExecuteDefault(string nameOfCommand)
     {
         return CommandResult.NoOp(message: $"Command `{nameOfCommand}` not found. Type 'help' to see all available commands.");
     }
-    
+
     public async Task<CommandResult> ExecuteAllParsed(List<string> command, string currentDirectory = "")
     {
         if (!ValidateCommand(command)) return CommandResult.NoOp("No command provided.");
         AvailableCommands typedCommand = IndentifyCommand(command[0]);
         string nameOfCommand = command[0];
-        
+
         return typedCommand switch
         {
             AvailableCommands.Cd => ExecuteCd(typedCommand, nameOfCommand, command),
@@ -846,6 +871,7 @@ private CommandResult ExecuteToggleHidden(AvailableCommands typedCommand, string
             AvailableCommands.CreateFile => ExecuteCreateFile(typedCommand, nameOfCommand, command, currentDirectory),
             AvailableCommands.CreateFileWithContent => await ExecuteCreateFileWithContent(typedCommand, nameOfCommand, command, currentDirectory),
             AvailableCommands.Copy => ExecuteCopy(typedCommand, nameOfCommand, command, currentDirectory),
+            AvailableCommands.Move => ExecuteMove(typedCommand, nameOfCommand, command, currentDirectory),
             AvailableCommands.ReadFileContents => await ExecuteReadFileContents(typedCommand, nameOfCommand, command, currentDirectory),
             AvailableCommands.Exit => ExecuteExit(typedCommand, nameOfCommand, command),
             AvailableCommands.Help => ExecuteHelp(typedCommand, nameOfCommand, command),
