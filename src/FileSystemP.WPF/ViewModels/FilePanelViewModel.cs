@@ -206,6 +206,50 @@ public partial class FilePanelViewModel : ObservableObject
         ClipboardPath = SelectedEntry.FilePath;
     }
 
+    public async Task MoveEntryToDirectory(string sourcePath, string destinationDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath) || string.IsNullOrWhiteSpace(destinationDirectory))
+            return;
+
+        string sourceFullPath = Path.GetFullPath(sourcePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        string destinationFullPath = Path.GetFullPath(destinationDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+
+        if (!Directory.Exists(destinationFullPath))
+            return;
+
+        string finalDestination = Path.Combine(destinationFullPath, Path.GetFileName(sourceFullPath));
+
+        if (string.Equals(finalDestination, sourceFullPath, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        if (Directory.Exists(sourceFullPath) && destinationFullPath.StartsWith(sourceFullPath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        {
+            MessageBox.Show("Cannot move a folder into itself.", "Invalid destination", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (File.Exists(finalDestination) || Directory.Exists(finalDestination))
+        {
+            MessageBox.Show($"The destination '{Path.GetFileName(sourceFullPath)}' already exists.", "Conflict", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            FileDirectorySystemService.Move(sourceFullPath, destinationFullPath);
+            _undoService.Push(new UndoMoveAction(finalDestination, sourceFullPath));
+
+            if (!string.IsNullOrEmpty(_currentPath))
+            {
+                await LoadEntries(_currentPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanPaste))]
     private async Task Paste()
     {
@@ -232,7 +276,7 @@ public partial class FilePanelViewModel : ObservableObject
             var progress = new Progress<double>(p => CopyProgress = p);
 
             await Task.Run(() => FileSystemP.Core.Services.FileDirectorySystemService.Copy(ClipboardPath, destination, overwrite: false, progress));
-            
+
             _undoService.Push(new UndoCreateAction(destination));
             await LoadEntries(_currentPath);
         }
