@@ -9,6 +9,7 @@ public enum AvailableCommands
     CreateFile,
     CreateFileWithContent,
     Copy,
+    Move,
     ReadFileContents,
     Exit,
     Help,
@@ -18,13 +19,16 @@ public enum AvailableCommands
     Ls,
     OpenProperties,
     Back,
-    Forward, 
+    Forward,
     Home,
     Undo,
     Search,
     Hidden,
     Find,
-    OpenFile
+    OpenFile,
+    SetBind,
+    ListBinds,
+    ResetBinds
 }
 
 public enum FlagsForCommands
@@ -42,5 +46,6 @@ public enum FlagsForCommands
     LsNone,
     FindExact,
     FindPattern,
-    FindNone
+    FindNone,
+    OverwriteBind,
 }

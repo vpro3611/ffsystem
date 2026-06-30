@@ -84,6 +84,55 @@ public class FileDirectorySystemServiceTests : IDisposable
         Assert.True(Directory.Exists(At("NewDir")));
     }
 
+    // --- Move ---
+
+    [Fact]
+    public void Move_FileToFileDestination_MovesFileAndPreservesContent()
+    {
+        var source = At("source.txt");
+        var destination = At("moved.txt");
+        File.WriteAllText(source, "content");
+
+        FileDirectorySystemService.Move(source, destination);
+
+        Assert.False(File.Exists(source));
+        Assert.True(File.Exists(destination));
+        Assert.Equal("content", File.ReadAllText(destination));
+    }
+
+    [Fact]
+    public void Move_FileToExistingDirectory_MovesFileIntoDirectory()
+    {
+        var source = At("source.txt");
+        var destinationDirectory = At("destination");
+        var finalPath = Path.Combine(destinationDirectory, "source.txt");
+        File.WriteAllText(source, "content");
+        Directory.CreateDirectory(destinationDirectory);
+
+        FileDirectorySystemService.Move(source, destinationDirectory);
+
+        Assert.False(File.Exists(source));
+        Assert.True(File.Exists(finalPath));
+        Assert.Equal("content", File.ReadAllText(finalPath));
+    }
+
+    [Fact]
+    public void Move_DirectoryToExistingDirectory_MovesDirectoryIntoDirectory()
+    {
+        var sourceDirectory = At("sourceDir");
+        var destinationDirectory = At("destination");
+        var movedDirectory = Path.Combine(destinationDirectory, "sourceDir");
+        Directory.CreateDirectory(sourceDirectory);
+        Directory.CreateDirectory(destinationDirectory);
+        File.WriteAllText(Path.Combine(sourceDirectory, "nested.txt"), "nested content");
+
+        FileDirectorySystemService.Move(sourceDirectory, destinationDirectory);
+
+        Assert.False(Directory.Exists(sourceDirectory));
+        Assert.True(Directory.Exists(movedDirectory));
+        Assert.Equal("nested content", File.ReadAllText(Path.Combine(movedDirectory, "nested.txt")));
+    }
+
     // --- Delete ---
 
     [Fact]
@@ -233,6 +282,13 @@ public class FileDirectorySystemServiceTests : IDisposable
 
         Assert.Throws<AppException>(() =>
             FileDirectorySystemService.Rename(src, "existing.txt"));
+    }
+
+    [Fact]
+    public void Move_ThrowsAppExceptionIfSourceDoesNotExist()
+    {
+        Assert.Throws<AppException>(() =>
+            FileDirectorySystemService.Move(At("missing.txt"), At("dest.txt")));
     }
 
     [Fact]

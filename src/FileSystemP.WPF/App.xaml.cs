@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows;
+using FileSystemP.Core.Services;
 
 namespace FileSystemP.WPF;
 
@@ -12,6 +13,7 @@ public partial class App : Application
     {
         base.OnStartup(e);
         ApplyTheme();
+        new KeyBindingSettingsService().EnsureSettingsFileIsValid();
     }
 
     private static void ApplyTheme()
@@ -30,4 +32,3 @@ public partial class App : Application
         Application.Current.Resources.MergedDictionaries[0] = dict;
     }
 }
-

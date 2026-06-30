@@ -6,8 +6,8 @@ FileSystemP is a Windows desktop file explorer and file-system inspection tool b
 
 - Drive-based explorer with folder tree and content panel
 - Breadcrumb navigation with back and forward history
-- Context-menu file operations for rename, delete, create, copy, paste, and undo
-- Built-in terminal command palette with file-system and navigation commands
+- Context-menu file operations for rename, move, delete, create, copy, paste, and undo
+- Built-in terminal command palette with file-system, navigation, and keybinding commands including `mv`, `set`, `binds`, and `resetbinds`
 - Detached terminal window that can be opened from the toolbar or with `F12`
 - Advanced search across names, extensions, attributes, size, and timestamps
 - Properties dialog with general, details, and security tabs
@@ -51,6 +51,10 @@ sequenceDiagram
     Panel->>Core: Enumerate entries
     Core-->>Panel: Files and directories
     Panel-->>User: Show folder contents
+    User->>Panel: Drag file or folder onto destination folder
+    Panel->>Core: Move(path, destination)
+    Core-->>Panel: Item moved
+    Panel-->>User: Refresh current folder contents
     User->>Panel: Open Properties
     Panel->>Props: Build view model from metadata
     Props->>Core: Apply file-system changes when saved
@@ -61,12 +65,14 @@ sequenceDiagram
     participant User
     participant Terminal as CommandPaletteViewModel
     participant Parser as Parser
+    participant Core as FileDirectorySystemService
     participant Main as MainWindowViewModel
     participant Panel as FilePanelViewModel
 
     User->>Terminal: Enter command
     Terminal->>Terminal: Tokenize input and grouped args
     Terminal->>Parser: ExecuteAllParsed(parts, currentDirectory)
+    Parser->>Core: Perform file-system action such as Move(path, destination)
     Parser-->>Terminal: CommandResult
     Terminal->>Main: Apply navigation/search/history actions
     Terminal->>Panel: Open file or run undo when requested
@@ -102,6 +108,7 @@ dotnet test .\tests\FileSystemP.Tests\FileSystemP.Tests.csproj
 - [Architecture](docs/architecture.md)
 - [User Guide](docs/user-guide.md)
 - [Developer Guide](docs/developer-guide.md)
+- [Keybinding and Settings Guide](docs/keybinding-settings.md)
 - [Attribute Behavior Reference](docs/attribute-behavior.md)
 
 ## Current Platform Notes
@@ -110,6 +117,7 @@ dotnet test .\tests\FileSystemP.Tests\FileSystemP.Tests.csproj
 - Compression support is explicitly limited to Windows NTFS volumes.
 - Shell metadata depends on Windows shell property APIs.
 - Security editing is based on Windows access control lists and Windows identities.
+- Keyboard shortcuts are stored per user in `%LocalAppData%\FileSystemP\ffsystem_settings.json` and validated on startup.
 - Terminal grouped arguments use backticks, for example:
 
 ```text

@@ -57,6 +57,14 @@ public record UndoCreateAction(string Path) : IUndoAction
     }
 }
 
+public record UndoMoveAction(string CurrentPath, string OriginalPath) : IUndoAction
+{
+    public void Execute()
+    {
+        FileDirectorySystemService.Move(CurrentPath, OriginalPath);
+    }
+}
+
 public record UndoDeleteAction(string OriginalPath) : IUndoAction
 {
     public void Execute()
@@ -69,7 +77,7 @@ public record UndoDeleteAction(string OriginalPath) : IUndoAction
             Console.WriteLine("Could not find Shell.Application type.");
             return;
         }
-        
+
         dynamic? shell = Activator.CreateInstance(shellType);
         if (shell == null)
         {
@@ -79,7 +87,7 @@ public record UndoDeleteAction(string OriginalPath) : IUndoAction
 
         dynamic recycleBin = shell.NameSpace(10);
         bool found = false;
-        
+
         // Normalize search path
         string normalizedOriginal = Path.GetFullPath(OriginalPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
@@ -87,7 +95,7 @@ public record UndoDeleteAction(string OriginalPath) : IUndoAction
         {
             string itemName = recycleBin.GetDetailsOf(item, 0);
             string itemOriginalLocation = recycleBin.GetDetailsOf(item, 1);
-            
+
             string fullItemPath = Path.Combine(itemOriginalLocation, itemName).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
             if (string.Equals(fullItemPath, normalizedOriginal, StringComparison.OrdinalIgnoreCase))
@@ -96,7 +104,7 @@ public record UndoDeleteAction(string OriginalPath) : IUndoAction
                 foreach (dynamic verb in item.Verbs())
                 {
                     string verbName = verb.Name.Replace("&", "");
-                    // Try English and common localizations if needed, 
+                    // Try English and common localizations if needed,
                     // but "Restore" is often the internal name even if displayed differently.
                     // However, we can also check for specific properties if this fails.
                     if (string.Equals(verbName, "Restore", StringComparison.OrdinalIgnoreCase))
@@ -111,7 +119,7 @@ public record UndoDeleteAction(string OriginalPath) : IUndoAction
                 {
                     item.InvokeVerb("restore");
                 }
-                
+
                 found = true;
                 break;
             }

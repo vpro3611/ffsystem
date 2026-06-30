@@ -48,7 +48,7 @@ Contains:
 - search tests
 - attribute behavior tests
 - parser tests
-- selected view-model tests
+- selected view-model tests, including terminal command and drag-drop move flows
 
 ## Dependencies
 
@@ -99,9 +99,11 @@ Contains:
 2. Register the command name in `src/FileSystemP.Core/CommandService/Parser.cs`.
 3. Add or update argument validation in `CheckMinLengthForEachCommand`.
 4. Implement the command execution branch in `Parser`.
-5. Return a `CommandResult` and payload shape that the UI can interpret.
-6. If the command requires new UI behavior, handle the new `CommandResult` signal in `CommandPaletteViewModel`.
-7. Add parser tests and, if needed, command-palette view-model tests.
+5. If the command mutates the file system, consider whether `UndoService` needs a new undo action.
+6. If the command persists application settings, prefer a dedicated core service so both parser and WPF startup can share the same validation rules.
+7. Return a `CommandResult` and payload shape that the UI can interpret.
+8. If the command requires new UI behavior, handle the new `CommandResult` signal in `CommandPaletteViewModel`.
+9. Add parser tests and, if needed, command-palette or view-model tests.
 
 ### Extend terminal input syntax
 
@@ -162,15 +164,16 @@ The WPF layer owns user-input tokenization because it is responsible for termina
 The current suite verifies:
 
 - `AppException` behavior
-- file and directory service behavior
+- file and directory service behavior, including move operations
+- keybinding settings creation, normalization, conflict handling, and reset behavior
 - drive enumeration
 - search filtering and cancellation
-- command parsing, help, `ls`, and `find` behavior
+- command parsing, help, `ls`, `find`, `mv`, `set`, `binds`, and `resetbinds` behavior
 - NTFS metadata extraction
 - shell metadata lookup
 - attribute behavior, including recursive cases
 - security metadata retrieval and modification
-- properties, permission-editor, terminal-command, and detached-terminal view-model behavior
+- properties, permission-editor, terminal-command, drag-drop move, keybinding execution, and detached-terminal view-model behavior
 
 ## Known Limitations
 
@@ -179,6 +182,7 @@ The current suite verifies:
 - Compression behavior depends on Windows NTFS support and may not be available on all volumes.
 - Directory metadata size calculation can be expensive on large trees because it recursively enumerates all files.
 - The terminal tokenizer currently supports grouped arguments with backticks rather than shell-style escaping or nested quoting.
+- Keybinding execution is currently routed through the main window preview-key pipeline, so shortcut scope is application-wide rather than context-specific.
 
 ## Recommended Next Documentation Additions
 

@@ -2,9 +2,9 @@ namespace FileSystemP.Core.Services;
 
 public static class FileDirectorySystemService
 {
-    
+
     private const string _className = nameof(FileDirectorySystemService);
-    
+
     public static IEnumerable<FileSystemInfo> GetEntries(string path)
     {
         try
@@ -67,6 +67,30 @@ public static class FileDirectorySystemService
         }
     }
 
+    public static void Move(string path, string destination)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                MoveFile(path, destination);
+                return;
+            }
+
+            if (Directory.Exists(path))
+            {
+                MoveDirectory(path, destination);
+                return;
+            }
+
+            throw new FileNotFoundException($"Path not found: {path}");
+        }
+        catch (Exception e)
+        {
+            throw new AppException(e.Message, $"{_className}.{nameof(Move)}()", e.Source, e);
+        }
+    }
+
     public static void CreateDirectory(string path)
     {
         try
@@ -95,7 +119,7 @@ public static class FileDirectorySystemService
             throw new AppException(e.Message, $"{_className}.{nameof(CreateFile)}()", e.Source, e);
         }
     }
-    
+
     public static async Task CreateFileWithContent(string path, string content)
     {
         try
@@ -136,6 +160,38 @@ public static class FileDirectorySystemService
         {
             throw new AppException(e.Message, $"{_className}.{nameof(Copy)}()", e.Source, e);
         }
+    }
+
+    private static void MoveFile(string path, string destination)
+    {
+        string finalDestination = GetFinalDestinationPath(path, destination);
+        File.Move(path, finalDestination);
+    }
+
+    private static void MoveDirectory(string path, string destination)
+    {
+        string finalDestination = GetFinalDestinationPath(path, destination);
+
+        var sourceFullPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var destinationFullPath = Path.GetFullPath(finalDestination).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        if (destinationFullPath.StartsWith(sourceFullPath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new IOException($"Cannot move a directory into itself. Source: {path}, Destination: {finalDestination}");
+        }
+
+        Directory.Move(path, finalDestination);
+    }
+
+    private static string GetFinalDestinationPath(string path, string destination)
+    {
+        if (!Directory.Exists(destination))
+        {
+            return destination;
+        }
+
+        string itemName = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        return Path.Combine(destination, itemName);
     }
 
     private static int CountFiles(DirectoryInfo dir)
@@ -186,7 +242,7 @@ public static class FileDirectorySystemService
         try
         {
             return await File.ReadAllBytesAsync(path);
-        } 
+        }
         catch (Exception e)
         {
             throw new AppException(e.Message, $"{_className}.{nameof(ReadFileContent)}()", e.Source, e);
@@ -218,7 +274,7 @@ public static class FileDirectorySystemService
             {
                 int lastN = Math.Abs(countOfLines);
                 Queue<string> queue = new(lastN);
-                
+
                 string? line;
 
                 while ((line = await reader.ReadLineAsync()) != null)

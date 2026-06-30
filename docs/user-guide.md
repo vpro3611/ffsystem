@@ -47,6 +47,7 @@ The content panel supports context-menu operations on files and folders.
 
 - Open
 - Rename
+- Move by dragging a file or folder onto a destination folder
 - Delete
 - Copy
 - Paste
@@ -54,13 +55,17 @@ The content panel supports context-menu operations on files and folders.
 - New File with Content
 - New Folder
 - Properties
-- Undo for recent create, rename, and paste actions
+- Undo for recent create, rename, move, and paste actions
 
 ### Notes
 
 - Double-clicking a folder navigates into it.
 - Double-clicking a file opens it through the Windows shell.
 - Copy and paste support both files and folders. For folders, the copy is recursive and includes all subfolders and files.
+- Dragging a file or folder onto another folder moves it there.
+- You can drop onto a folder in the content panel or onto a folder in the explorer tree.
+- The move behavior follows the familiar Windows Explorer pattern: dropping onto a folder moves the dragged item into that folder while keeping its name.
+- Dropping an item onto its current parent folder has no effect.
 
 ## Terminal
 
@@ -77,9 +82,10 @@ FileSystemP includes a built-in command terminal for file-system operations, nav
 
 The terminal supports commands for:
 
-- file operations: `rename`, `del`, `mkdir`, `mkfile`, `mkfilewith`, `cp`
+- file operations: `rename`, `mv`, `del`, `mkdir`, `mkfile`, `mkfilewith`, `cp`
 - navigation and view actions: `cd`, `back`, `forward`, `home`, `search`, `hidden`, `undo`
 - inspection: `ls`, `rfilecont`, `prop`, `open`, `find`
+- keybinding management: `set`, `binds`, `resetbinds`
 - help and discovery: `help`, `helpflags`, `explain`, `explainall`
 
 ### Grouped arguments
@@ -90,6 +96,7 @@ Examples:
 
 ```text
 mkfilewith new.txt `content new new new`
+mv report.txt `D:\My Folder\Archive`
 cp report.txt `D:\My Folder\Backup Copy` -o
 open `C:\My Folder\notes.txt`
 ```
@@ -99,9 +106,33 @@ If the closing backtick is missing, the terminal shows a friendly input error in
 ### Terminal-specific notes
 
 - `clear` clears the terminal history view.
+- `mv` moves a file or directory to the given destination path. If the destination is an existing directory, the item is moved into that directory.
+- `set <action> <binding>` assigns a shortcut to a supported action, for example `set undo Ctrl+Z`.
+- `binds` lists the current action-to-shortcut map.
+- `resetbinds` restores the default shortcut set.
+- Use `-ob` or `--overbind` with `set` when you want to reassign a shortcut that is already used by another action.
 - `cp` shows progress output in the terminal while the copy is running.
-- Commands such as `back`, `forward`, `search`, `hidden`, `undo`, `open`, and `prop` can and will trigger UI actions instead of only printing text. This is to keep terminal envirnoments consistent with the main window's UI.
+- Commands such as `back`, `forward`, `search`, `hidden`, `undo`, `open`, and `prop` can and will trigger UI actions instead of only printing text. This is to keep terminal environments consistent with the main window's UI.
 - `help` lists available commands, while `explain` and `helpflags` provide more specific details.
+
+### Keyboard shortcuts
+
+Keyboard shortcuts are stored per user in `%LocalAppData%\FileSystemP\ffsystem_settings.json`.
+
+Behavior notes:
+
+- the settings file is validated on application startup
+- invalid or conflicting bindings are repaired before the UI uses them
+- shortcut changes made through the terminal take effect immediately in the running app
+- `binds` can be used to inspect the current mapping and `resetbinds` restores the defaults
+
+Default examples include:
+
+- `Ctrl+Z` for undo
+- `Ctrl+F` for search
+- `F12` for the detached terminal
+- `F2` for rename
+- `Delete` for delete
 
 ## Search
 

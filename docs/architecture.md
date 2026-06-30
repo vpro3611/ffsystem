@@ -50,16 +50,17 @@ flowchart TD
 - an explorer sidebar with a drive-based tree
 - a search sidebar with advanced filters
 - a list-based content panel for the current folder
+- drag-and-drop move support from the content panel into folders in the panel or explorer tree
 - an embedded terminal host that can be swapped out for a detached terminal window
 
 ### View-model responsibilities
 
 | View model | Responsibility |
 | --- | --- |
-| `MainWindowViewModel` | Coordinates navigation, path history, breadcrumb generation, and top-level composition |
+| `MainWindowViewModel` | Coordinates navigation, path history, breadcrumb generation, top-level composition, and keybinding-driven UI actions |
 | `FileTreeViewModel` | Exposes ready drives as explorer roots |
 | `FileTreeNode` | Lazily expands subdirectories when a tree node is opened |
-| `FilePanelViewModel` | Loads folder contents and performs rename, delete, create, copy, paste, undo, and properties actions |
+| `FilePanelViewModel` | Loads folder contents and performs rename, move, delete, create, copy, paste, undo, and properties actions |
 | `SearchViewModel` | Builds advanced search criteria, runs cancellable search, and projects results into the file panel |
 | `CommandPaletteViewModel` | Tokenizes terminal input, invokes command parsing, and maps `CommandResult` responses into UI actions |
 | `PropertiesViewModel` | Aggregates NTFS metadata, shell metadata, editable attributes, and security state |
@@ -94,13 +95,16 @@ The core library is organized by behavior rather than by UI feature:
 
 - enumerate direct children of a folder
 - rename files and directories
+- move files and directories
 - delete files and directories
 - create files and directories
 - create files with initial content
 - copy files and directories (recursive)
 - read file bytes
 
-`UndoService` tracks undoable file-system actions such as rename, create, delete, and selected copy flows so both toolbar and terminal commands can revert recent operations.
+`UndoService` tracks undoable file-system actions such as rename, move, create, delete, and selected copy flows so both toolbar and terminal commands can revert recent operations.
+
+`KeyBindingSettingsService` stores, validates, normalizes, and restores per-user keyboard shortcuts in `%LocalAppData%\FileSystemP\ffsystem_settings.json`.
 
 ### Command subsystem
 
@@ -115,8 +119,9 @@ The parser is intentionally UI-agnostic. It receives a `List<string>` plus the c
 
 Supported command areas currently include:
 
-- file-system mutation: `rename`, `del`, `mkdir`, `mkfile`, `mkfilewith`, `cp`
+- file-system mutation: `rename`, `mv`, `del`, `mkdir`, `mkfile`, `mkfilewith`, `cp`
 - navigation and window actions: `cd`, `back`, `forward`, `home`, `search`, `hidden`, `open`, `prop`, `undo`
+- keybinding management: `set`, `binds`, `resetbinds`
 - discovery and help: `help`, `helpflags`, `explain`, `explainall`, `ls`, `find`, `rfilecont`
 
 `DriveService` returns ready drives and allows lookup by drive name.
@@ -186,6 +191,8 @@ flowchart TD
 The codebase uses a project-specific `AppException` to wrap many lower-level failures and preserve the originating service or method name. In the UI layer, most operation failures are surfaced to the user through dialogs or inline error messages rather than terminating the application.
 
 Terminal tokenization errors, such as an unmatched backtick in a grouped argument, are handled in the WPF layer before a command is sent to the core parser. That keeps user-facing input errors separate from core command semantics.
+
+Keybinding settings are also validated at startup so malformed or conflicting shortcut definitions are repaired before the main window tries to execute them.
 
 ## Testing Strategy
 

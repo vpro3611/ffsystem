@@ -10,12 +10,14 @@ public sealed class ParserTests : IDisposable
 {
     private readonly string _tempDir;
     private readonly Parser _parser;
+    private readonly IKeyBindingSettingsService _keyBindingSettingsService;
 
     public ParserTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(_tempDir);
-        _parser = Parser.CreateParser(new UndoService());
+        _keyBindingSettingsService = new KeyBindingSettingsService(Path.Combine(_tempDir, "ffsystem_settings.json"));
+        _parser = Parser.CreateParser(new UndoService(), _keyBindingSettingsService);
     }
 
     public void Dispose()
@@ -68,7 +70,7 @@ public sealed class ParserTests : IDisposable
 
         var cdResult = Assert.IsType<CdResult>(result.Payload);
         var entries = cdResult.Entries;
-        
+
         Assert.Equal("Validated path `" + _tempDir + "`.", result.Message);
         Assert.Contains(entries, entry => entry.Name == "file.txt");
         Assert.Contains(entries, entry => entry.Name == "subdir");
@@ -103,6 +105,112 @@ public sealed class ParserTests : IDisposable
         var exception = await Assert.ThrowsAsync<AppException>(() => _parser.ExecuteAllParsed(["rename", At("old.txt")]));
 
         Assert.Contains("requires at least 3 arguments", exception.Message);
+    }
+
+    [Fact]
+    public async Task Move_WithValidArguments_MovesFile()
+    {
+        var source = At("source.txt");
+        var destination = At("moved.txt");
+        File.WriteAllText(source, "content");
+
+        var result = await _parser.ExecuteAllParsed(["mv", source, destination]);
+
+        Assert.True(result.Success);
+        Assert.False(File.Exists(source));
+        Assert.True(File.Exists(destination));
+        Assert.Equal("content", File.ReadAllText(destination));
+        Assert.Equal("Moved `" + source + "` to `" + destination + "`.", result.Message);
+    }
+
+    [Fact]
+    public async Task Move_ToExistingDirectory_MovesFileIntoDirectory()
+    {
+        var source = At("source.txt");
+        var destinationDirectory = At("dest");
+        File.WriteAllText(source, "content");
+        Directory.CreateDirectory(destinationDirectory);
+
+        var result = await _parser.ExecuteAllParsed(["mv", source, destinationDirectory]);
+
+        var finalDestination = Path.Combine(destinationDirectory, "source.txt");
+        Assert.True(result.Success);
+        Assert.False(File.Exists(source));
+        Assert.True(File.Exists(finalDestination));
+        Assert.Equal("content", File.ReadAllText(finalDestination));
+        Assert.Equal("Moved `" + source + "` to `" + destinationDirectory + "`.", result.Message);
+    }
+
+    [Fact]
+    public async Task Move_WithoutDestination_ThrowsAppException()
+    {
+        var exception = await Assert.ThrowsAsync<AppException>(() => _parser.ExecuteAllParsed(["mv", At("source.txt")]));
+
+        Assert.Contains("requires at least 3 arguments", exception.Message);
+    }
+
+    [Fact]
+    public async Task SetBind_WithValidAction_SavesBinding()
+    {
+        var result = await _parser.ExecuteAllParsed(["set", "undo", "Ctrl+Y"]);
+
+        var bindings = _keyBindingSettingsService.GetBindings();
+        Assert.True(result.Success);
+        Assert.Equal("Ctrl+Y", bindings["undo"]);
+        Assert.Contains("Set binding for `undo` to `Ctrl+Y`", result.Message);
+    }
+
+    [Fact]
+    public async Task SetBind_WithConflictingBindingWithoutOverwrite_ThrowsAppException()
+    {
+        var exception = await Assert.ThrowsAsync<AppException>(() => _parser.ExecuteAllParsed(["set", "search", "Ctrl+Z"]));
+
+        Assert.Contains("already assigned to action `undo`", exception.Message);
+    }
+
+    [Fact]
+    public async Task SetBind_WithOverwriteFlag_ReassignsBinding()
+    {
+        var result = await _parser.ExecuteAllParsed(["set", "search", "Ctrl+Z", "-ob"]);
+
+        var bindings = _keyBindingSettingsService.GetBindings();
+        Assert.True(result.Success);
+        Assert.Equal("Ctrl+Z", bindings["search"]);
+        Assert.Null(bindings["undo"]);
+    }
+
+    [Fact]
+    public async Task SetBind_WithoutBinding_ThrowsAppException()
+    {
+        var exception = await Assert.ThrowsAsync<AppException>(() => _parser.ExecuteAllParsed(["set", "undo"]));
+
+        Assert.Contains("requires at least 3 arguments", exception.Message);
+    }
+
+    [Fact]
+    public async Task ListBinds_ReturnsCurrentBindings()
+    {
+        await _parser.ExecuteAllParsed(["set", "undo", "Ctrl+Y"]);
+
+        var result = await _parser.ExecuteAllParsed(["binds"]);
+
+        var payload = Assert.IsType<Dictionary<string, string>>(result.Payload);
+        Assert.True(result.Success);
+        Assert.Equal("Ctrl+Y", payload["undo"]);
+        Assert.Contains("Current bindings from", result.Message);
+    }
+
+    [Fact]
+    public async Task ResetBinds_RestoresDefaultBindings()
+    {
+        await _parser.ExecuteAllParsed(["set", "undo", "Ctrl+Y"]);
+
+        var result = await _parser.ExecuteAllParsed(["resetbinds"]);
+
+        var bindings = _keyBindingSettingsService.GetBindings();
+        Assert.True(result.Success);
+        Assert.Equal("Ctrl+Z", bindings["undo"]);
+        Assert.Contains("Restored default bindings", result.Message);
     }
 
     [Theory]
@@ -391,7 +499,7 @@ public sealed class ParserTests : IDisposable
 
         var data = Assert.IsType<CdResult>(cdResult.Payload);
         var entries = data.Entries;
-        
+
         Assert.Contains(entries, entry => entry.Name == "note.txt");
         Assert.False(Directory.Exists(directory));
     }
