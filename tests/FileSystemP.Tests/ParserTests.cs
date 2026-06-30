@@ -10,12 +10,14 @@ public sealed class ParserTests : IDisposable
 {
     private readonly string _tempDir;
     private readonly Parser _parser;
+    private readonly IKeyBindingSettingsService _keyBindingSettingsService;
 
     public ParserTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(_tempDir);
-        _parser = Parser.CreateParser(new UndoService());
+        _keyBindingSettingsService = new KeyBindingSettingsService(Path.Combine(_tempDir, "ffsystem_settings.json"));
+        _parser = Parser.CreateParser(new UndoService(), _keyBindingSettingsService);
     }
 
     public void Dispose()
@@ -145,6 +147,70 @@ public sealed class ParserTests : IDisposable
         var exception = await Assert.ThrowsAsync<AppException>(() => _parser.ExecuteAllParsed(["mv", At("source.txt")]));
 
         Assert.Contains("requires at least 3 arguments", exception.Message);
+    }
+
+    [Fact]
+    public async Task SetBind_WithValidAction_SavesBinding()
+    {
+        var result = await _parser.ExecuteAllParsed(["set", "undo", "Ctrl+Y"]);
+
+        var bindings = _keyBindingSettingsService.GetBindings();
+        Assert.True(result.Success);
+        Assert.Equal("Ctrl+Y", bindings["undo"]);
+        Assert.Contains("Set binding for `undo` to `Ctrl+Y`", result.Message);
+    }
+
+    [Fact]
+    public async Task SetBind_WithConflictingBindingWithoutOverwrite_ThrowsAppException()
+    {
+        var exception = await Assert.ThrowsAsync<AppException>(() => _parser.ExecuteAllParsed(["set", "search", "Ctrl+Z"]));
+
+        Assert.Contains("already assigned to action `undo`", exception.Message);
+    }
+
+    [Fact]
+    public async Task SetBind_WithOverwriteFlag_ReassignsBinding()
+    {
+        var result = await _parser.ExecuteAllParsed(["set", "search", "Ctrl+Z", "-ob"]);
+
+        var bindings = _keyBindingSettingsService.GetBindings();
+        Assert.True(result.Success);
+        Assert.Equal("Ctrl+Z", bindings["search"]);
+        Assert.Null(bindings["undo"]);
+    }
+
+    [Fact]
+    public async Task SetBind_WithoutBinding_ThrowsAppException()
+    {
+        var exception = await Assert.ThrowsAsync<AppException>(() => _parser.ExecuteAllParsed(["set", "undo"]));
+
+        Assert.Contains("requires at least 3 arguments", exception.Message);
+    }
+
+    [Fact]
+    public async Task ListBinds_ReturnsCurrentBindings()
+    {
+        await _parser.ExecuteAllParsed(["set", "undo", "Ctrl+Y"]);
+
+        var result = await _parser.ExecuteAllParsed(["binds"]);
+
+        var payload = Assert.IsType<Dictionary<string, string>>(result.Payload);
+        Assert.True(result.Success);
+        Assert.Equal("Ctrl+Y", payload["undo"]);
+        Assert.Contains("Current bindings from", result.Message);
+    }
+
+    [Fact]
+    public async Task ResetBinds_RestoresDefaultBindings()
+    {
+        await _parser.ExecuteAllParsed(["set", "undo", "Ctrl+Y"]);
+
+        var result = await _parser.ExecuteAllParsed(["resetbinds"]);
+
+        var bindings = _keyBindingSettingsService.GetBindings();
+        Assert.True(result.Success);
+        Assert.Equal("Ctrl+Z", bindings["undo"]);
+        Assert.Contains("Restored default bindings", result.Message);
     }
 
     [Theory]

@@ -1,10 +1,37 @@
 using System.Windows.Media;
+using FileSystemP.Core.Services;
 using FileSystemP.WPF.ViewModels;
 
 namespace FileSystemP.Tests;
 
 public class MainWindowViewModelTests
 {
+    [Fact]
+    public void TryExecuteKeyBinding_UsesConfiguredSearchBinding()
+    {
+        var settingsPath = Path.Combine(Path.GetTempPath(), "FileSystemP_KeyBindingTests_" + Guid.NewGuid().ToString("N") + ".json");
+        var settingsService = new KeyBindingSettingsService(settingsPath);
+        settingsService.EnsureSettingsFileIsValid();
+        settingsService.SetBinding("search", "Ctrl+Shift+F", overwrite: true);
+
+        try
+        {
+            var vm = new MainWindowViewModel(settingsService);
+
+            bool executed = vm.TryExecuteKeyBinding("Ctrl+Shift+F");
+
+            Assert.True(executed);
+            Assert.Equal(1, vm.SelectedSidebarSectionIndex);
+        }
+        finally
+        {
+            if (File.Exists(settingsPath))
+            {
+                File.Delete(settingsPath);
+            }
+        }
+    }
+
     [Fact]
     public void OpenDetachedTerminal_SetsDetachedState()
     {
